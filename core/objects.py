@@ -24,6 +24,9 @@ class Slash:
     class Hello(Slash, name="ping"):
         async def callback(self, interaction):
             await interaction.response.send_message("Hello World!")
+
+    # somewhere else
+    bot.registerSlash(Hello)
     """
 
     def __init__(self, **kwargs) -> None:
