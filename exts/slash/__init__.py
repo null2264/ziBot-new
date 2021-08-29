@@ -3,10 +3,14 @@ This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """
+from __future__ import annotations
+
+from typing import Union
 
 import discord
 from discord.ext import commands
 
+from core.context import Context
 from core.mixin import CogMixin
 
 
@@ -57,18 +61,25 @@ class Slash(commands.Cog, CogMixin):
         await self.bot.http.request(r, json=_commands)
 
     @commands.command(cls=SlashMeta, description="Just testing")
-    async def slash_test(self, ctx):
-        await ctx.send("test")
+    async def slash_test(self, ctx: Union[Context, discord.Interaction]):
+        e = discord.Embed(title="Test")
+        msgContent = "test"
+        if isinstance(ctx, discord.Interaction):
+            return await ctx.response.send_message(msgContent, embed=e)
+        await ctx.send(msgContent, embed=e)
 
     @commands.Cog.listener("on_interaction")
     async def onExecuted(self, interaction: discord.Interaction):
         if interaction.type != discord.InteractionType.application_command:
             return
 
-        print(interaction.data)
-        await interaction.response.send_message(
-            interaction.data["name"] + "\n[test](https://google.com)"
-        )
+        cmd = self.bot.get_command(interaction.data["name"])
+        await cmd(interaction)
+
+        # print(interaction.data)
+        # await interaction.response.send_message(
+        #     interaction.data["name"] + "\n[test](https://google.com)"
+        # )
 
 
 def setup(bot):
