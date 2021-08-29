@@ -45,6 +45,7 @@ for filename in os.listdir(FMT):
             continue
         if not filename.startswith("_"):
             EXTS.append("{}.{}".format(EXTS_DIR, filename))
+PRIVATE_CMDS = "/applications/{app}/guilds/{guild}/commands"
 
 
 async def _callablePrefix(bot: ziBot, message: discord.Message) -> list:
@@ -177,6 +178,9 @@ class ziBot(commands.Bot):
                 if not ctx.author.guild_permissions.manage_guild:
                     raise commands.DisabledCommand
             return True
+
+        # Slash commands
+        self._slash = {}
 
     async def asyncInit(self) -> None:
         """`__init__` but async"""
@@ -650,6 +654,30 @@ class ziBot(commands.Bot):
             return
 
         await self.process(message)
+
+    # async def registerSlash(self, slashCmds: List[Slash]):
+    #     """Register slash commands"""
+    #     me: discord.ClientUser = self.user  # type: ignore
+
+    #     fmt = [
+    #         {
+    #             "name": slash.name,
+    #             "description": (
+    #                 slash.description
+    #                 or slash.brief
+    #                 or "This command is not documented yet"
+    #             ),
+    #         }
+    #         for slash in slashCmds
+    #     ]
+
+    #     r = discord.http.Route(
+    #         "PUT", PRIVATE_CMDS, app=me.id, guild=807260318270619748
+    #     )
+
+    #     await self.http.request(r, json=fmt)
+
+    #     self._slash[slash.name] = slash
 
     async def close(self) -> None:
         """Properly close/turn off bot"""
