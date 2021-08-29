@@ -376,7 +376,9 @@ class ziBot(commands.Bot):
     async def manageGuildDeletion(self) -> None:
         """Manages guild deletion from database on boot"""
         async with self.db.transaction():
-            timer: Timer = self.get_cog("Timer")
+            timer: Optional[Timer] = self.get_cog("Timer")  # type: ignore
+            if not timer:
+                return
 
             dbGuilds = await self.db.fetch_all("SELECT id FROM guilds")
             dbGuilds = [i[0] for i in dbGuilds]
@@ -453,14 +455,20 @@ class ziBot(commands.Bot):
 
     async def scheduleDeletion(self, guildId: int, days: int = 30) -> None:
         """Schedule guild deletion from `guilds` table"""
-        timer: Timer = self.get_cog("Timer")
+        timer: Optional[Timer] = self.get_cog("Timer")  # type: ignore
+        if not timer:
+            return
+
         now = utcnow()
         when = now + datetime.timedelta(days=days)
         await timer.createTimer(when, "guild_del", created=now, owner=guildId)
 
     async def cancelDeletion(self, guild: discord.Guild) -> None:
         """Cancel guild deletion"""
-        timer: Timer = self.get_cog("Timer")
+        timer: Optional[Timer] = self.get_cog("Timer")  # type: ignore
+        if not timer:
+            return
+
         # Remove the deletion timer and restart timer task
         async with self.db.transaction():
             await self.db.execute(
@@ -558,7 +566,7 @@ class ziBot(commands.Bot):
         if canRun:
             if priority >= 1:
                 with suppress(CCommandNotFound, CCommandNotInGuild, CCommandDisabled):
-                    await executeCC(*args)
+                    await executeCC(*args)  # type: ignore
                     self.customCommandUsage += 1
                     return ""
             # Since priority is 0 and it can run the built-in command,
@@ -569,7 +577,7 @@ class ziBot(commands.Bot):
         else:
             with suppress(CCommandNotFound, CCommandNotInGuild, CCommandDisabled):
                 # Can't run built-in command, straight to trying custom command
-                await executeCC(*args)
+                await executeCC(*args)  # type: ignore
                 self.customCommandUsage += 1
                 return ""
             await self.invoke(ctx)
@@ -587,9 +595,9 @@ class ziBot(commands.Bot):
                 prefixes.append(f"`{pref}`")
         prefixes = ", ".join(prefixes)
 
-        result = "My default prefixes are `{}` or {}".format(
-            self.defPrefix, self.user.mention
-        )
+        me: discord.ClientUser = self.user  # type: ignore
+
+        result = "My default prefixes are `{}` or {}".format(self.defPrefix, me.mention)
         if prefixes:
             result += "\n\nCustom prefixes: {}".format(prefixes)
         return result
@@ -612,8 +620,10 @@ class ziBot(commands.Bot):
         ) and message.author.id not in self.master:
             return
 
+        me: discord.ClientUser = self.user  # type: ignore
+
         # if bot is mentioned without any other message, send prefix list
-        pattern = f"<@(!?){self.user.id}>"
+        pattern = f"<@(!?){me.id}>"
         if re.fullmatch(pattern, message.content):
             e = discord.Embed(
                 description=await self.formattedPrefixes(message.guild.id),
@@ -621,7 +631,7 @@ class ziBot(commands.Bot):
             )
             e.set_footer(
                 text="Use `@{} help` to learn how to use the bot".format(
-                    self.user.display_name
+                    me.display_name
                 )
             )
             await message.reply(embed=e)
