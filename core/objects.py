@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any
-
-import discord
+from typing import Any, Optional
 
 
 class Connection(sqlite3.Connection):
@@ -21,16 +19,29 @@ class Slash:
 
     Planned usage:
 
-    class Hello(Slash, name="ping"):
-        async def callback(self, interaction):
+    class Cog(SlashCog):
+        @slash_command()
+        async def test(self, interaction):
             await interaction.response.send_message("Hello World!")
-
-    # somewhere else
-    bot.registerSlash(Hello)
     """
 
-    def __init__(self, **kwargs) -> None:
-        pass
+    def __init__(self, func, **kwargs) -> None:
+        self.name: str = kwargs["name"]
+        self.description = None
+        self._callback = func
 
-    async def callback(self, interaction: discord.Interaction) -> Any:
-        raise NotImplementedError
+    @property
+    def callback(self) -> Any:
+        return self._callback
+
+
+def slash_command(*, cls=Slash, name: Optional[str] = None):
+    def decorator(func):
+        if isinstance(func, Slash):
+            raise TypeError("Callback is already a slash command.")
+
+        slash = Slash(func, name=name or func.__name__)
+
+        return slash
+
+    return decorator

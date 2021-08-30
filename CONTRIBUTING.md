@@ -3,6 +3,7 @@ Please try to follow these guidelines when contributing/making pull requests to 
 - To contribute, fork the repo, edit the fork, and create a pull requests.
 - Naming guidelines:
   * Classes: `CamelCase`
+  * "Custom" Decorators: `snake_case` (Consistent with discord.py's decorators)
   * Functions: `lowerCamelCase`
   * Variables **inside** a function/class: `lowerCamelCase`
   * Variables **outside** a function/class: `UPPERCASE`
