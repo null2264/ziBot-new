@@ -4,6 +4,8 @@ from __future__ import annotations
 import sqlite3
 from typing import Any, Optional
 
+import discord
+
 
 class Connection(sqlite3.Connection):
     def __init__(self, *args, **kwargs) -> None:
@@ -19,29 +21,51 @@ class Slash:
 
     Planned usage:
 
-    class Cog(SlashCog):
-        @slash_command()
-        async def test(self, interaction):
-            await interaction.response.send_message("Hello World!")
+    @slash(...)
+    async def hello(self, interaction):
+        await interaction.response.send_message("Hello World!")
+
+    # or
+
+    class Test(Slash):
+        def callback(self, interaction):
+            await interaction.response.send_message("テスト")
     """
 
-    def __init__(self, func, **kwargs) -> None:
-        self.name: str = kwargs["name"]
-        self.description = None
-        self._callback = func
+    name: str = None  # type: ignore # just a placeholder
+    description: Optional[str] = None
 
-    @property
-    def callback(self) -> Any:
-        return self._callback
+    def __init_subclass__(cls, *, name: str = None):
+        cls.name = str(name or cls.__name__).lower()
+
+    def __init__(self, **kwargs) -> None:
+        if not kwargs:
+            # only decorator use kwargs
+            return
+
+        self.name = str(kwargs.get("name", self.name)).lower()
+        self.description = kwargs.get("description")
+
+    async def callback(self, interaction: discord.Interaction) -> Any:
+        pass
 
 
-def slash_command(*, cls=Slash, name: Optional[str] = None):
+def slash(*, name: str = None):
+    """Simple slash command without having to subclass it"""
+
     def decorator(func):
-        if isinstance(func, Slash):
-            raise TypeError("Callback is already a slash command.")
-
-        slash = Slash(func, name=name or func.__name__)
-
-        return slash
+        ret = Slash(name=name or func.__name__)
+        ret.callback = func
+        return ret
 
     return decorator
+
+
+@slash()
+async def hello(interaction: discord.Interaction):
+    return await interaction.response.send_message("Hello World")
+
+
+class Test(Slash):
+    async def callback(self, interaction: discord.Interaction):
+        return await interaction.response.send_message("テスト")

@@ -19,7 +19,7 @@ import config
 from core.colour import ZColour
 from core.context import Context
 from core.errors import CCommandDisabled, CCommandNotFound, CCommandNotInGuild
-from core.objects import Connection
+from core.objects import Connection, Slash, Test, hello
 from exts.meta._utils import getDisabledCommands
 from exts.meta.meta import getCustomCommands
 from exts.timer.timer import Timer, TimerData
@@ -165,7 +165,6 @@ class ziBot(commands.Bot):
             headers={"User-Agent": "Discord/Z3RO (ziBot/3.0 by ZiRO2264)"}
         )
         self.loop.create_task(self.asyncInit())
-        self.loop.create_task(self.startUp())
 
         @self.check
         async def botCheck(ctx):
@@ -184,7 +183,6 @@ class ziBot(commands.Bot):
 
     async def asyncInit(self) -> None:
         """`__init__` but async"""
-        # self.db = await aiosqlite.connect("data/database.db")
         await self.db.connect()
 
         async with self.db.transaction():
@@ -197,6 +195,8 @@ class ziBot(commands.Bot):
             await self.db.execute(dbQuery.createDisabledTable)
             await self.db.execute(dbQuery.createGuildMutesTable)
             await self.db.execute(dbQuery.createCaseLogTable)
+
+        await self.startUp()
 
     async def startUp(self) -> None:
         """Will run when the bot ready"""
@@ -211,6 +211,8 @@ class ziBot(commands.Bot):
         owner: discord.User = (await self.application_info()).owner
         if owner and owner.id not in self.master:
             self.master += (owner.id,)
+
+        await self.registerSlash([hello, Test()])
 
         # change bot's presence into guild live count
         self.changing_presence.start()
@@ -605,10 +607,6 @@ class ziBot(commands.Bot):
         if prefixes:
             result += "\n\nCustom prefixes: {}".format(prefixes)
         return result
-        # return "My prefixes are: {} or {}".format(
-        #     prefixes,
-        #     self.user.mention if not codeblock else ("@" + self.user.display_name),
-        # )
 
     async def process(self, message):
         processed = await self.process_commands(message)
@@ -655,29 +653,42 @@ class ziBot(commands.Bot):
 
         await self.process(message)
 
-    # async def registerSlash(self, slashCmds: List[Slash]):
-    #     """Register slash commands"""
-    #     me: discord.ClientUser = self.user  # type: ignore
+    async def registerSlash(self, slashCmds: Iterable[Slash]):
+        """Register slash commands"""
+        me: discord.ClientUser = self.user  # type: ignore
 
-    #     fmt = [
-    #         {
-    #             "name": slash.name,
-    #             "description": (
-    #                 slash.description
-    #                 or slash.brief
-    #                 or "This command is not documented yet"
-    #             ),
-    #         }
-    #         for slash in slashCmds
-    #     ]
+        fmt = []
 
-    #     r = discord.http.Route(
-    #         "PUT", PRIVATE_CMDS, app=me.id, guild=807260318270619748
-    #     )
+        for slash in slashCmds:
+            fmt.append(
+                {
+                    "name": slash.name,
+                    "description": (
+                        slash.description or "This command is not documented yet"
+                    ),
+                }
+            )
 
-    #     await self.http.request(r, json=fmt)
+            self._slash[slash.name] = slash
 
-    #     self._slash[slash.name] = slash
+        r = discord.http.Route(  # type: ignore
+            "PUT", PRIVATE_CMDS, app=me.id, guild=807260318270619748
+        )
+
+        await self.http.request(r, json=fmt)
+
+    async def on_interaction(self, interaction: discord.Interaction):
+        """Mainly used to handle slash command"""
+        if interaction.type != discord.InteractionType.application_command:
+            return
+        try:
+            slash = self._slash[interaction.data["name"]]  # type: ignore
+        except KeyError:
+            return await interaction.response.send_message(
+                "Invalid command, slash command takes awhile to update. Please try again later",
+                ephemeral=True,
+            )
+        await slash.callback(interaction)
 
     async def close(self) -> None:
         """Properly close/turn off bot"""
