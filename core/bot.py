@@ -45,7 +45,9 @@ for filename in os.listdir(FMT):
             continue
         if not filename.startswith("_"):
             EXTS.append("{}.{}".format(EXTS_DIR, filename))
+
 PRIVATE_CMDS = "/applications/{app}/guilds/{guild}/commands"
+CMDS = "/applications/{app}/commands"
 
 
 async def _callablePrefix(bot: ziBot, message: discord.Message) -> list:
@@ -212,6 +214,7 @@ class ziBot(commands.Bot):
         if owner and owner.id not in self.master:
             self.master += (owner.id,)
 
+        # await self.registerSlash([hello, Test()], guild=807260318270619748)
         await self.registerSlash([hello, Test()])
 
         # change bot's presence into guild live count
@@ -653,7 +656,7 @@ class ziBot(commands.Bot):
 
         await self.process(message)
 
-    async def registerSlash(self, slashCmds: Iterable[Slash]):
+    async def registerSlash(self, slashCmds: Iterable[Slash], guild: int = None):
         """Register slash commands"""
         me: discord.ClientUser = self.user  # type: ignore
 
@@ -671,9 +674,12 @@ class ziBot(commands.Bot):
 
             self._slash[slash.name] = slash
 
-        r = discord.http.Route(  # type: ignore
-            "PUT", PRIVATE_CMDS, app=me.id, guild=807260318270619748
-        )
+        if guild:
+            r = discord.http.Route(  # type: ignore
+                "PUT", PRIVATE_CMDS, app=me.id, guild=807260318270619748
+            )
+        else:
+            r = discord.http.Route("PUT", CMDS, app=me.id)  # type: ignore
 
         await self.http.request(r, json=fmt)
 
