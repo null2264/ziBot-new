@@ -72,14 +72,14 @@ More feature coming soon!
   ```
 - Copy and paste (or rename) [`config.py-example`](./config.py-example) to `config.py`
 - Edit all the necessary config value (`token`, `botMasters`, and `sql`)
-- Run the bot by executing this command, `poetry run python main.py`
+- Run the bot by executing this command, `poetry run python .`
 - If everything is setup properly, the bot should be online!
 
 ### Development
 
 - Install poetry `pip install poetry` then run `poetry install`
 - Run `poetry run pre-commit install`
-- To run the bot executing this command, `poetry run python main.py`
+- To run the bot executing this command, `poetry run python .`
 
 ## Changelog
 
@@ -88,17 +88,17 @@ Moved to [CHANGELOG.md](./CHANGELOG.md)
 ## Plans
 
 - Event for ~~member boosting a guild~~ (Just need to implement setup for it)
-- Properly support different SQL scheme (databases have `database_url.scheme` to check scheme type)
 - Tags (stripped version of custom command)
 - Unify categories/exts emoji
 - Channel manager commands
-- Reaction Role
+- Reaction Role (With buttons... button role?)
 - Starboard
-- Slash command (Waiting for implementation)
 
 ### Pending Plan
 
 - i18n using gettext (Learning how gettext works)
+- Slash command (Waiting for implementation)
+- Properly support different SQL scheme (designing best way to do this)
 
 ### Scrapped Plan
 
