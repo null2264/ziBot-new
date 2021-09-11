@@ -17,6 +17,7 @@ class ApplicationCommand:
     """Class for application commands."""
 
     __app_type__: int = 1
+    # NOTE: Name has to match `^[\w-]{1,32}$`
     __app_name__: str
     __app_description__: Optional[str]
 
@@ -58,7 +59,9 @@ class Slash(ApplicationCommand):
     def __init__(self, **kwargs) -> None:
         self.type: int = self.__app_type__
         self.name: str = str(kwargs.get("name", self.__app_name__)).lower()
-        self.description: Optional[str] = kwargs.get("description")
+        self.description: Optional[str] = kwargs.get(
+            "description", self.__app_description__
+        )
 
     async def callback(self, interaction: discord.Interaction) -> Any:
         pass
@@ -67,18 +70,18 @@ class Slash(ApplicationCommand):
         return await self.callback(*args, **kwargs)
 
 
-def slash(*, name: str = None):
+def slash(*, name: str = None, description: str = None):
     """Simple slash command without having to subclass it"""
 
     def decorator(func):
-        ret = Slash(name=name or func.__name__)
+        ret = Slash(name=name or func.__name__, description=description)
         ret.callback = func
         return ret
 
     return decorator
 
 
-@slash()
+@slash(description="Sends 'Hello World'")
 async def hello(interaction: discord.Interaction):
     return await interaction.response.send_message("Hello World")
 
