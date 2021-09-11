@@ -20,7 +20,8 @@ import config
 from core.colour import ZColour
 from core.context import Context
 from core.errors import CCommandDisabled, CCommandNotFound, CCommandNotInGuild
-from core.objects import Connection, Slash, Test, hello
+from core.objects import Connection
+from core.slash import Slash, Test, hello
 from exts.meta._utils import getDisabledCommands
 from exts.meta.meta import getCustomCommands
 from exts.timer.timer import Timer, TimerData
@@ -703,18 +704,20 @@ class ziBot(commands.Bot):
 
         await self.http.request(r, json=fmt)
 
-    async def on_interaction(self, interaction: discord.Interaction):
-        """Mainly used to handle slash command"""
-        if interaction.type != discord.InteractionType.application_command:
-            return
+    async def process_slash(self, interaction: discord.Interaction):
         try:
-            slash = self._slash[interaction.data["name"]]  # type: ignore
+            command: Slash = self._slash[interaction.data["name"]]  # type: ignore
         except KeyError:
             return await interaction.response.send_message(
                 "Invalid command, slash command takes awhile to update. Please try again later",
                 ephemeral=True,
             )
-        await slash.callback(interaction)
+        return await command(interaction)
+
+    async def on_interaction(self, interaction: discord.Interaction):
+        """Mainly used to handle slash command"""
+        if interaction.type == discord.InteractionType.application_command:
+            return await self.process_slash(interaction)
 
     async def close(self) -> None:
         """Properly close/turn off bot"""
