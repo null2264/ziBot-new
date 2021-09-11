@@ -17,11 +17,11 @@ from databases import Database, DatabaseURL
 from discord.ext import commands, tasks
 
 import config
+from core.app_command import Slash, Test, hello
 from core.colour import ZColour
 from core.context import Context
 from core.errors import CCommandDisabled, CCommandNotFound, CCommandNotInGuild
 from core.objects import Connection
-from core.slash import Slash, Test, hello
 from exts.meta._utils import getDisabledCommands
 from exts.meta.meta import getCustomCommands
 from exts.timer.timer import Timer, TimerData

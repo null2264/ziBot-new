@@ -16,10 +16,13 @@ class Option:
 class ApplicationCommand:
     """Class for application commands."""
 
-    # These will be overwritten on subclass
-    type: int = 1
-    name: str
-    description: Optional[str]
+    __app_type__: int = 1
+    __app_name__: str
+    __app_description__: Optional[str]
+
+    def __init_subclass__(cls, *, name: str = None, description: str = None):
+        cls.__app_name__ = str(name or cls.__name__).lower()
+        cls.__app_description__ = description
 
     def toDict(self) -> Dict[str, Any]:
         """Convert Slash object into dict.
@@ -27,9 +30,10 @@ class ApplicationCommand:
         Useful when registering Slash to discord
         """
         return {
-            "type": self.type,
-            "name": self.name,
-            "description": self.description or "No description",
+            "type": getattr(self, "type", self.__app_type__),
+            "name": getattr(self, "name", self.__app_name__),
+            "description": getattr(self, "description", self.__app_description__)
+            or "No description",
         }
 
 
@@ -49,20 +53,12 @@ class Slash(ApplicationCommand):
             await interaction.response.send_message("テスト")
     """
 
-    type: int = 1
-    name: str = None  # type: ignore # just a placeholder
-    description: Optional[str] = None
-
-    def __init_subclass__(cls, *, name: str = None):
-        cls.name = str(name or cls.__name__).lower()
+    __app_type__: int = 1
 
     def __init__(self, **kwargs) -> None:
-        if not kwargs:
-            # only decorator use kwargs
-            return
-
-        self.name = str(kwargs.get("name", self.name)).lower()
-        self.description = kwargs.get("description")
+        self.type: int = self.__app_type__
+        self.name: str = str(kwargs.get("name", self.__app_name__)).lower()
+        self.description: Optional[str] = kwargs.get("description")
 
     async def callback(self, interaction: discord.Interaction) -> Any:
         pass
