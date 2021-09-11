@@ -1,7 +1,7 @@
 """My slash command implementation"""
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 import discord
 
@@ -35,6 +35,13 @@ class Slash:
 
         self.name = str(kwargs.get("name", self.name)).lower()
         self.description = kwargs.get("description")
+
+    def toDict(self) -> Dict[str, Any]:
+        """Convert Slash object into dict.
+
+        Useful when registering Slash to discord
+        """
+        return {"name": self.name, "description": self.description or "No description"}
 
     async def callback(self, interaction: discord.Interaction) -> Any:
         pass

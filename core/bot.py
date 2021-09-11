@@ -230,8 +230,8 @@ class ziBot(commands.Bot):
         if owner and owner.id not in self.owner_ids:
             self.owner_ids += (owner.id,)
 
-        # await self.registerSlash([hello, Test()], guild=807260318270619748)
-        await self.registerSlash([hello, Test()])
+        await self.registerSlash([hello, Test()], guildId=807260318270619748)
+        # await self.registerSlash([hello, Test()])
 
         # change bot's presence into guild live count
         self.changing_presence.start()
@@ -677,27 +677,20 @@ class ziBot(commands.Bot):
 
         await self.process(message)
 
-    async def registerSlash(self, slashCmds: Iterable[Slash], guild: int = None):
+    async def registerSlash(self, slashCmds: Iterable[Slash], guildId: int = None):
         """Register slash commands"""
         me: discord.ClientUser = self.user  # type: ignore
 
         fmt = []
 
         for slash in slashCmds:
-            fmt.append(
-                {
-                    "name": slash.name,
-                    "description": (
-                        slash.description or "This command is not documented yet"
-                    ),
-                }
-            )
+            fmt.append(slash.toDict())
 
             self._slash[slash.name] = slash
 
-        if guild:
+        if guildId:
             r = discord.http.Route(  # type: ignore
-                "PUT", PRIVATE_CMDS, app=me.id, guild=807260318270619748
+                "PUT", PRIVATE_CMDS, app=me.id, guild=guildId
             )
         else:
             r = discord.http.Route("PUT", CMDS, app=me.id)  # type: ignore
