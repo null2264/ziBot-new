@@ -1,3 +1,6 @@
+from discord.enums import Enum
+
+
 class Emojis:
     ok = "<:ok2_0:873464878982115360>"
     error = "<:error:783265883228340245>"
@@ -8,3 +11,9 @@ class Emojis:
     last = "<:last:873471805120208926>"
     stop = "<:stop:873474135941066762>"
     info = "<:info:783206485051441192>"
+
+
+class ApplicationCommandType(Enum):
+    chat_input = 1
+    user = 2
+    message = 3
