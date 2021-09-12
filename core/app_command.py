@@ -29,6 +29,22 @@ class Option:
     def isRequired(self) -> bool:
         return self.default is MISSING
 
+    def convertType(self, type: Any) -> int:
+        if isinstance(type, int):
+            return type
+
+        return {
+            str: 3,
+            int: 4,
+            bool: 5,
+            discord.User: 6,
+            discord.Member: 6,
+            "channel": 7,
+            discord.Role: 8,
+            "mentionable": 9,
+            float: 10,
+        }.get(type, 3)
+
     def toDict(self) -> Dict[str, Any]:
         """Convert Slash object into dict.
 
@@ -36,8 +52,7 @@ class Option:
         """
         return {
             "name": self.name,
-            # TODO: Make a converter, to convert python type to discord app cmd type
-            "type": 3,
+            "type": self.convertType(self.type),
             "description": self.description or "No description",
             "required": self.isRequired,
         }
@@ -139,7 +154,7 @@ async def hello(interaction: discord.Interaction):
 class Test(Slash):
     def __init__(self):
         super().__init__()
-        self.extendOptions([Option("name", type=str)])
+        self.extendOptions([Option("name", type=discord.Member)])
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer()
