@@ -21,8 +21,8 @@ from core.colour import ZColour
 from core.context import Context
 from core.errors import CCommandDisabled, CCommandNotFound, CCommandNotInGuild
 from core.objects import Connection
+from exts.meta._custom_command import getCustomCommands
 from exts.meta._utils import getDisabledCommands
-from exts.meta.meta import getCustomCommands
 from exts.timer.timer import Timer, TimerData
 from utils import dbQuery
 from utils.cache import (
@@ -40,12 +40,12 @@ EXTS = []
 EXTS_DIR = "exts"
 EXTS_IGNORED = ("twitch.py", "youtube.py", "slash.py", "music.py")
 FMT = "./{}".format(EXTS_DIR)
-for filename in os.listdir(FMT):
-    if os.path.isdir(os.path.join(FMT, filename)):
-        if filename in EXTS_IGNORED:
-            continue
-        if not filename.startswith("_"):
-            EXTS.append("{}.{}".format(EXTS_DIR, filename))
+# for filename in os.listdir(FMT):
+#     if os.path.isdir(os.path.join(FMT, filename)):
+#         if filename in EXTS_IGNORED:
+#             continue
+#         if not filename.startswith("_"):
+#             EXTS.append("{}.{}".format(EXTS_DIR, filename))
 
 
 async def _callablePrefix(bot: ziBot, message: discord.Message) -> list:
@@ -162,15 +162,15 @@ class ziBot(commands.Bot):
         )
 
         # database
-        dbUrl = DatabaseURL(config.sql)
+        # dbUrl = DatabaseURL(config.sql)
 
-        dbKwargs = {}
-        if dbUrl.scheme == "sqlite":
-            # Custom factory for sqlite
-            # This thing here since sqlite3 doesn't do foreign_keys=ON by
-            # default
-            dbKwargs = {"factory": Connection}
-        self.db: Database = Database(dbUrl, **dbKwargs)
+        # dbKwargs = {}
+        # if dbUrl.scheme == "sqlite":
+        #     # Custom factory for sqlite
+        #     # This thing here since sqlite3 doesn't do foreign_keys=ON by
+        #     # default
+        #     dbKwargs = {"factory": Connection}
+        # self.db: Database = Database(dbUrl, **dbKwargs)
 
         # async init
         self.session: aiohttp.ClientSession = aiohttp.ClientSession(

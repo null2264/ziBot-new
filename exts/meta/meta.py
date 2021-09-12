@@ -26,12 +26,12 @@ from core.errors import (
 )
 from core.menus import ZChoices, ZMenuPagesView, choice
 from core.mixin import CogMixin
-from utils import dbQuery, sql, tseBlocks
+from utils import dbQuery, tseBlocks
 from utils.cache import CacheListProperty, CacheUniqueViolation
 from utils.format import CMDName, cleanifyPrefix, formatCmdName
 from utils.other import reactsToMessage, utcnow
 
-from ._custom_command import getCustomCommand, getCustomCommands
+from ._custom_command import getCustomCommand
 from ._flags import CmdManagerFlags
 from ._help import CustomHelp
 from ._objects import CustomCommand

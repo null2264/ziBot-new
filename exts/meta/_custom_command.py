@@ -1,5 +1,3 @@
-import sqlalchemy as sa
-
 from core.errors import CCommandNotFound
 from utils import dbQuery, sql
 
