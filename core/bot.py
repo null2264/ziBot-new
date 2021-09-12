@@ -13,8 +13,8 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 
 import aiohttp
 import discord
-from databases import Database, DatabaseURL
 from discord.ext import commands, tasks
+from tortoise import BaseDBAsyncClient, Tortoise
 
 import config
 from core.colour import ZColour
@@ -109,9 +109,7 @@ class ziBot(commands.Bot):
             else tuple([int(master) for master in config.botMasters])
         )
 
-        self.issueChannel: Optional[int] = (
-            None if not hasattr(config, "issueChannel") else int(config.issueChannel)
-        )
+        self.issueChannel: Optional[int] = int(getattr(config, "issueChannel", 0))
 
         self.blacklist: Blacklist = Blacklist("blacklist.json")
 
@@ -165,6 +163,7 @@ class ziBot(commands.Bot):
 
         # database
         dbUrl = DatabaseURL(config.sql)
+
         dbKwargs = {}
         if dbUrl.scheme == "sqlite":
             # Custom factory for sqlite
@@ -194,19 +193,24 @@ class ziBot(commands.Bot):
 
     async def asyncInit(self) -> None:
         """`__init__` but async"""
-        # self.db = await aiosqlite.connect("data/database.db")
-        await self.db.connect()
+        await Tortoise.init(db_url=config.sql, modules={"models": ["core.models"]})
+        await Tortoise.generate_schemas(safe=True)
+        # await self.db.connect()
 
-        async with self.db.transaction():
-            # Creating all the necessary tables
-            await self.db.execute(dbQuery.createGuildsTable)
-            await self.db.execute(dbQuery.createGuildConfigsTable)
-            await self.db.execute(dbQuery.createGuildChannelsTable)
-            await self.db.execute(dbQuery.createGuildRolesTable)
-            await self.db.execute(dbQuery.createPrefixesTable)
-            await self.db.execute(dbQuery.createDisabledTable)
-            await self.db.execute(dbQuery.createGuildMutesTable)
-            await self.db.execute(dbQuery.createCaseLogTable)
+        # async with self.db.transaction():
+        #     # Creating all the necessary tables
+        #     await self.db.execute(dbQuery.createGuildsTable)
+        #     await self.db.execute(dbQuery.createGuildConfigsTable)
+        #     await self.db.execute(dbQuery.createGuildChannelsTable)
+        #     await self.db.execute(dbQuery.createGuildRolesTable)
+        #     await self.db.execute(dbQuery.createPrefixesTable)
+        #     await self.db.execute(dbQuery.createDisabledTable)
+        #     await self.db.execute(dbQuery.createGuildMutesTable)
+        #     await self.db.execute(dbQuery.createCaseLogTable)
+
+    @property
+    def db(self) -> BaseDBAsyncClient:
+        return Tortoise.get_connection("default")
 
     async def startUp(self) -> None:
         """Will run when the bot ready"""
@@ -665,8 +669,7 @@ class ziBot(commands.Bot):
         """Properly close/turn off bot"""
         await super().close()
         # Close database
-        # await self.db.close()
-        await self.db.disconnect()
+        await Tortoise.close_connections()
         # Close aiohttp session
         await self.session.close()
 
