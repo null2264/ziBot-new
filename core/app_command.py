@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import discord
 from discord.utils import MISSING
@@ -156,7 +156,11 @@ class Test(Slash):
         super().__init__()
         self.extendOptions([Option("name", type=discord.Member)])
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(
+        self,
+        interaction: discord.Interaction,
+        member: Union[discord.Member, discord.User],
+    ):
         await interaction.response.defer()
         await asyncio.sleep(5)
-        return await interaction.followup.send("テスト")
+        return await interaction.followup.send(member.mention)

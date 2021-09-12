@@ -698,6 +698,44 @@ class ziBot(commands.Bot):
         await self.http.request(r, json=fmt)
 
     async def process_slash(self, interaction: discord.Interaction):
+        data = interaction.data
+        if not data:
+            return
+
+        root = data.get("name")
+
+        resolved = data.get("resolved")
+
+        cmd = [root]
+        args = []
+        for s in data.get("options", []):
+            if not resolved:
+                break
+
+            # Subcommand or Subcommand group
+            if s["type"] <= 2:
+                cmd.append(s["name"])
+                continue
+
+            # Construct Member/User object out of resolved data
+            if s["type"] == 6:
+                userId = s.get("value")
+                if not userId:
+                    raise ValueError("Invalid User")
+
+                _member = resolved.get("members", {}).get(userId)  # type: ignore
+                _user = resolved.get("users", {}).get(userId)  # type: ignore
+                if _member and interaction.guild:
+                    _member["user"] = _user
+                    args.append(
+                        discord.Member(
+                            data=_member,
+                            guild=interaction.guild,
+                            state=interaction._state,
+                        )
+                    )
+                else:
+                    args.append(discord.User(state=interaction._state, data=_user))
         try:
             command: Slash = self._slash[interaction.data["name"]]  # type: ignore
         except KeyError:
@@ -705,7 +743,7 @@ class ziBot(commands.Bot):
                 "Invalid command, slash command takes awhile to update. Please try again later",
                 ephemeral=True,
             )
-        return await command(interaction)
+        return await command(interaction, *args)
 
     async def on_interaction(self, interaction: discord.Interaction):
         """Mainly used to handle slash command"""
