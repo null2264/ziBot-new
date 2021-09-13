@@ -202,13 +202,6 @@ class Slash(metaclass=ApplicationCommand):
 
     Planned usage:
 
-    # only for no argument and no subcommand slash
-    @slash(...)
-    async def hello(self, interaction):
-        await interaction.response.send_message("Hello World!")
-
-    # or
-
     class Test(Slash, name="test"):
         option1: str = Option("channel", default="What")
         option2: Optional[str]
@@ -237,4 +230,11 @@ class Test(Slash, description="test"):
     member: discord.Member
 
     async def callback(self, interaction: discord.Interaction) -> Any:
-        return await interaction.response.send_message(self.member.id)
+        return await interaction.response.send_message(self.member.mention)
+
+
+class Echo(Slash):
+    message: str = "Test"
+
+    async def callback(self, interaction: discord.Interaction) -> Any:
+        return await interaction.response.send_message(self.message)

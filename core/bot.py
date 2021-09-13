@@ -17,7 +17,7 @@ from databases import Database, DatabaseURL
 from discord.ext import commands, tasks
 
 import config
-from core.app_command import ApplicationCommand, Test, WrappedOptions
+from core.app_command import ApplicationCommand, Echo, Test, WrappedOptions
 from core.colour import ZColour
 from core.context import Context
 from core.errors import CCommandDisabled, CCommandNotFound, CCommandNotInGuild
@@ -230,7 +230,7 @@ class ziBot(commands.Bot):
         if owner and owner.id not in self.owner_ids:
             self.owner_ids += (owner.id,)
 
-        await self.registerSlash([Test], guildId=807260318270619748)
+        await self.registerSlash([Test, Echo], guildId=807260318270619748)
         # await self.registerSlash([hello, Test()])
 
         # change bot's presence into guild live count
@@ -720,16 +720,20 @@ class ziBot(commands.Bot):
 
         cmd = [root]
         for s in data.get("options", []):
-            if not resolved:
-                break
-
+            optName = s["name"]
             # Subcommand or Subcommand group
             if s["type"] <= 2:
-                cmd.append(s["name"])
+                cmd.append(optName)
                 continue
 
             # Construct Member/User object out of resolved data
-            if s["type"] == 6:
+            if s["type"] == 3:
+                if value := s.get("value"):
+                    options[optName].value = value
+            elif s["type"] == 6:
+                if not resolved:
+                    continue
+
                 userId = s.get("value")
                 if not userId:
                     raise ValueError("Invalid User")
@@ -738,13 +742,13 @@ class ziBot(commands.Bot):
                 _user = resolved.get("users", {}).get(userId)  # type: ignore
                 if _member and interaction.guild:
                     _member["user"] = _user
-                    options[s["name"]].value = discord.Member(
+                    options[optName].value = discord.Member(
                         data=_member,
                         guild=interaction.guild,
                         state=interaction._state,
                     )
                 else:
-                    options[s["name"]].value = discord.User(
+                    options[optName].value = discord.User(
                         state=interaction._state, data=_user
                     )
         return await command(WrappedOptions(options), interaction)
