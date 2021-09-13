@@ -699,11 +699,12 @@ class ziBot(commands.Bot):
 
         await self.http.request(r, json=fmt)
 
-    async def process_slash(self, interaction: discord.Interaction):
+    async def process_app_commands(self, interaction: discord.Interaction):
         data = interaction.data
         if not data:
             return
 
+        # TODO: handle subcommand and subcommand group
         try:
             command: ApplicationCommand = self._slash[interaction.data["name"]]  # type: ignore
         except KeyError:
@@ -738,25 +739,26 @@ class ziBot(commands.Bot):
                 if not userId:
                     raise ValueError("Invalid User")
 
-                _member = resolved.get("members", {}).get(userId)  # type: ignore
-                _user = resolved.get("users", {}).get(userId)  # type: ignore
-                if _member and interaction.guild:
+                _user = resolved["users"][userId]  # type: ignore
+                try:
+                    _member = resolved.get("members", {}).get(userId)  # type: ignore
+                except KeyError:
+                    options[optName].value = discord.User(
+                        state=interaction._state, data=_user
+                    )
+                else:
                     _member["user"] = _user
                     options[optName].value = discord.Member(
                         data=_member,
-                        guild=interaction.guild,
+                        guild=interaction.guild,  # type: ignore
                         state=interaction._state,
-                    )
-                else:
-                    options[optName].value = discord.User(
-                        state=interaction._state, data=_user
                     )
         return await command(WrappedOptions(options), interaction)
 
     async def on_interaction(self, interaction: discord.Interaction):
         """Mainly used to handle slash command"""
         if interaction.type == discord.InteractionType.application_command:
-            return await self.process_slash(interaction)
+            return await self.process_app_commands(interaction)
 
     async def close(self) -> None:
         """Properly close/turn off bot"""
