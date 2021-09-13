@@ -17,7 +17,7 @@ from databases import Database, DatabaseURL
 from discord.ext import commands, tasks
 
 import config
-from core.app_command import Slash, Test, hello
+from core.app_command import ApplicationCommand, Test, WrappedOptions
 from core.colour import ZColour
 from core.context import Context
 from core.errors import CCommandDisabled, CCommandNotFound, CCommandNotInGuild
@@ -230,7 +230,7 @@ class ziBot(commands.Bot):
         if owner and owner.id not in self.owner_ids:
             self.owner_ids += (owner.id,)
 
-        await self.registerSlash([hello, Test()], guildId=807260318270619748)
+        await self.registerSlash([Test], guildId=807260318270619748)
         # await self.registerSlash([hello, Test()])
 
         # change bot's presence into guild live count
@@ -677,16 +677,18 @@ class ziBot(commands.Bot):
 
         await self.process(message)
 
-    async def registerSlash(self, slashCmds: Iterable[Slash], guildId: int = None):
+    async def registerSlash(
+        self, slashCmds: Iterable[ApplicationCommand], guildId: int = None
+    ):
         """Register slash commands"""
         me: discord.ClientUser = self.user  # type: ignore
 
         fmt = []
 
         for slash in slashCmds:
-            fmt.append(slash.toDict())
+            fmt.append(slash._toDict())
 
-            self._slash[slash.name] = slash
+            self._slash[slash._name] = slash
 
         if guildId:
             r = discord.http.Route(  # type: ignore
@@ -702,12 +704,21 @@ class ziBot(commands.Bot):
         if not data:
             return
 
+        try:
+            command: ApplicationCommand = self._slash[interaction.data["name"]]  # type: ignore
+        except KeyError:
+            return await interaction.response.send_message(
+                "Invalid command, slash command takes awhile to update. Please try again later",
+                ephemeral=True,
+            )
+        else:
+            options = command._options
+
         root = data.get("name")
 
         resolved = data.get("resolved")
 
         cmd = [root]
-        args = []
         for s in data.get("options", []):
             if not resolved:
                 break
@@ -727,23 +738,16 @@ class ziBot(commands.Bot):
                 _user = resolved.get("users", {}).get(userId)  # type: ignore
                 if _member and interaction.guild:
                     _member["user"] = _user
-                    args.append(
-                        discord.Member(
-                            data=_member,
-                            guild=interaction.guild,
-                            state=interaction._state,
-                        )
+                    options[s["name"]].value = discord.Member(
+                        data=_member,
+                        guild=interaction.guild,
+                        state=interaction._state,
                     )
                 else:
-                    args.append(discord.User(state=interaction._state, data=_user))
-        try:
-            command: Slash = self._slash[interaction.data["name"]]  # type: ignore
-        except KeyError:
-            return await interaction.response.send_message(
-                "Invalid command, slash command takes awhile to update. Please try again later",
-                ephemeral=True,
-            )
-        return await command(interaction, *args)
+                    options[s["name"]].value = discord.User(
+                        state=interaction._state, data=_user
+                    )
+        return await command(WrappedOptions(options), interaction)
 
     async def on_interaction(self, interaction: discord.Interaction):
         """Mainly used to handle slash command"""
