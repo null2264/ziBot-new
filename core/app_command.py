@@ -220,6 +220,7 @@ class WrappedOptions:
     def __getattr__(self, option) -> Any:
         opt = self._options.get(option)
         if opt:
+            print(opt.value)
             if not opt.isRequired and opt.value is MISSING:
                 return opt.default
             return opt.value
@@ -235,6 +236,7 @@ class Test(Slash, description="test"):
 
 class Echo(Slash):
     message: str = "Test"
+    number: int = 1
 
     async def callback(self, interaction: discord.Interaction) -> Any:
-        return await interaction.response.send_message(self.message)
+        return await interaction.response.send_message(f"{self.message} {self.number}")

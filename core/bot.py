@@ -17,11 +17,11 @@ from databases import Database, DatabaseURL
 from discord.ext import commands, tasks
 
 import config
-from core.app_command import ApplicationCommand, Echo, Test, WrappedOptions
+from core.app_command import Echo, Test
 from core.colour import ZColour
 from core.context import Context
 from core.errors import CCommandDisabled, CCommandNotFound, CCommandNotInGuild
-from core.objects import Connection
+from core.objects import AppBot, Connection
 from exts.meta._utils import getDisabledCommands
 from exts.meta.meta import getCustomCommands
 from exts.timer.timer import Timer, TimerData
@@ -48,9 +48,6 @@ for filename in os.listdir(FMT):
         if not filename.startswith("_"):
             EXTS.append("{}.{}".format(EXTS_DIR, filename))
 
-PRIVATE_CMDS = "/applications/{app}/guilds/{guild}/commands"
-CMDS = "/applications/{app}/commands"
-
 
 async def _callablePrefix(bot: ziBot, message: discord.Message) -> list:
     """Callable Prefix for the bot."""
@@ -61,7 +58,7 @@ async def _callablePrefix(bot: ziBot, message: discord.Message) -> list:
     return commands.when_mentioned_or(*sorted(base))(bot, message)
 
 
-class ziBot(commands.Bot):
+class ziBot(AppBot):
 
     # --- NOTE: Information about the bot
     author: str = getattr(config, "author", "ZiRO2264#9999")
@@ -81,6 +78,8 @@ class ziBot(commands.Bot):
     def __init__(self) -> None:
         # custom intents, required since dpy v1.5
         intents = discord.Intents.all()
+
+        # Should be inside AppBotMixin but it refused to work
 
         super().__init__(
             command_prefix=_callablePrefix,
@@ -194,9 +193,6 @@ class ziBot(commands.Bot):
                 if not ctx.author.guild_permissions.manage_guild:
                     raise commands.DisabledCommand
             return True
-
-        # Slash commands
-        self._slash = {}
 
     async def asyncInit(self) -> None:
         """`__init__` but async"""
@@ -676,89 +672,6 @@ class ziBot(commands.Bot):
             return
 
         await self.process(message)
-
-    async def registerSlash(
-        self, slashCmds: Iterable[ApplicationCommand], guildId: int = None
-    ):
-        """Register slash commands"""
-        me: discord.ClientUser = self.user  # type: ignore
-
-        fmt = []
-
-        for slash in slashCmds:
-            fmt.append(slash._toDict())
-
-            self._slash[slash._name] = slash
-
-        if guildId:
-            r = discord.http.Route(  # type: ignore
-                "PUT", PRIVATE_CMDS, app=me.id, guild=guildId
-            )
-        else:
-            r = discord.http.Route("PUT", CMDS, app=me.id)  # type: ignore
-
-        await self.http.request(r, json=fmt)
-
-    async def process_app_commands(self, interaction: discord.Interaction):
-        data = interaction.data
-        if not data:
-            return
-
-        # TODO: handle subcommand and subcommand group
-        try:
-            command: ApplicationCommand = self._slash[interaction.data["name"]]  # type: ignore
-        except KeyError:
-            return await interaction.response.send_message(
-                "Invalid command, slash command takes awhile to update. Please try again later",
-                ephemeral=True,
-            )
-        else:
-            options = command._options
-
-        root = data.get("name")
-
-        resolved = data.get("resolved")
-
-        cmd = [root]
-        for s in data.get("options", []):
-            optName = s["name"]
-            # Subcommand or Subcommand group
-            if s["type"] <= 2:
-                cmd.append(optName)
-                continue
-
-            # Construct Member/User object out of resolved data
-            if s["type"] == 3:
-                if value := s.get("value"):
-                    options[optName].value = value
-            elif s["type"] == 6:
-                if not resolved:
-                    continue
-
-                userId = s.get("value")
-                if not userId:
-                    raise ValueError("Invalid User")
-
-                _user = resolved["users"][userId]  # type: ignore
-                try:
-                    _member = resolved.get("members", {}).get(userId)  # type: ignore
-                except KeyError:
-                    options[optName].value = discord.User(
-                        state=interaction._state, data=_user
-                    )
-                else:
-                    _member["user"] = _user
-                    options[optName].value = discord.Member(
-                        data=_member,
-                        guild=interaction.guild,  # type: ignore
-                        state=interaction._state,
-                    )
-        return await command(WrappedOptions(options), interaction)
-
-    async def on_interaction(self, interaction: discord.Interaction):
-        """Mainly used to handle slash command"""
-        if interaction.type == discord.InteractionType.application_command:
-            return await self.process_app_commands(interaction)
 
     async def close(self) -> None:
         """Properly close/turn off bot"""

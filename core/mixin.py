@@ -8,6 +8,9 @@ if TYPE_CHECKING:
 
     from core.bot import ziBot
 
+PRIVATE_CMDS = "/applications/{app}/guilds/{guild}/commands"
+CMDS = "/applications/{app}/commands"
+
 
 class CogMixin:
     """Mixin for Cogs/Exts."""
