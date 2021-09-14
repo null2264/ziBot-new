@@ -66,7 +66,7 @@ class AppBot(commands.Bot):
                 ephemeral=True,
             )
         else:
-            options = command._options.copy()
+            options = {name: option.copy() for name, option in command._options.items()}
 
         root = data.get("name")
 
@@ -81,7 +81,7 @@ class AppBot(commands.Bot):
                 continue
 
             # Construct Member/User object out of resolved data
-            if 3 >= s["type"] <= 5:
+            if 3 <= s["type"] <= 5:
                 if (value := s.get("value")) is not None:
                     options[optName].value = value
             elif s["type"] == 6:

@@ -39,6 +39,17 @@ class Option:
             dict_["options"] = [option._toDict() for option in self.options]
         return dict_
 
+    def copy(self):
+        return Option(
+            name=self.name,
+            description=self.description,
+            annotation=self.annotation,
+            type=self.type,
+            default=self.default,
+            options=self.options,
+            value=self.value,
+        )
+
 
 def option(
     *, name: str, default: Any = MISSING, options: List[Option] = MISSING
@@ -150,10 +161,8 @@ class ApplicationCommand(type):
         for optionName, option in getOptions(attrs, global_ns, local_ns).items():
             options[optionName] = option
 
-        appType = attrs.get("__app_type__")
-        if options and not appType:
-            # Only Slash or 'CHAT-INPUT' can have options
-            appType = attrs["__app_type__"] = 1
+        # If type is not specified, assume its a slash command
+        appType = attrs["__app_type__"] = attrs.get("__app_type__", 1)
 
         appName = name or className
         attrs["__app_name__"] = appName.lower() if appType == 1 else appName
@@ -220,7 +229,6 @@ class WrappedOptions:
     def __getattr__(self, option) -> Any:
         opt = self._options.get(option)
         if opt:
-            print(opt.value)
             if not opt.isRequired and opt.value is MISSING:
                 return opt.default
             return opt.value
