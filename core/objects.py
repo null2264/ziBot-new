@@ -66,6 +66,7 @@ class AppBot(commands.Bot):
                 ephemeral=True,
             )
         else:
+            # Deep copy options
             options = {name: option.copy() for name, option in command._options.items()}
 
         root = data.get("name")

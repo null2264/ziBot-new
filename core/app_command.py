@@ -13,6 +13,23 @@ from discord.utils import MISSING, resolve_annotation
 
 
 @dataclass
+class Choice:
+    """Dataclass for 'CHAT-INPUT' application commands' choice"""
+
+    name: str = MISSING
+    value: Any = MISSING
+
+    def _toDict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "value": self.value,
+        }
+
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass
 class Option:
     """Dataclass for 'CHAT-INPUT' application commands' option"""
 
@@ -23,6 +40,7 @@ class Option:
     default: Any = MISSING
     options: List[Option] = MISSING
     value: Any = MISSING
+    choices: List[Choice] = MISSING
 
     @property
     def isRequired(self) -> bool:
@@ -37,6 +55,8 @@ class Option:
         }
         if self.options is not MISSING:
             dict_["options"] = [option._toDict() for option in self.options]
+        if self.choices is not MISSING:
+            dict_["choices"] = [choice._toDict() for choice in self.choices]
         return dict_
 
     def copy(self):
@@ -105,11 +125,35 @@ def getOptions(
             option.type = convertToType(annotation)
         else:
             if origin is Union:
-                if annotation.__args__[-1] is type(None) and option.default is MISSING:
+                if (
+                    annotation.__args__[-1] is type(None)  # noqa
+                    and option.default is MISSING
+                ):
+                    # turn typing.Optional[type] into optional option
                     option.default = None
                     option.type = convertToType(annotation.__args__[0])
             elif origin is Literal:
-                print(origin)
+                # "Limited" way to add choices
+                _values = annotation.__args__
+                t = type(_values[0])
+                if t is bool:
+                    t = int
+
+                values = []
+                for val in _values:
+                    if type(val) is bool:
+                        val = int(val)
+
+                    if type(val) is not t:
+                        raise TypeError("Choices can't have 2 different type!")
+
+                    values.append(Choice(name=str(val), value=val))
+
+                option.default = values[0]
+                option.type = convertToType(t)
+                option.choices = values
+            else:
+                raise TypeError(f"{origin} is not supported!")
 
         if option.type is MISSING:
             option.type = convertToType(annotation)
@@ -251,8 +295,11 @@ class Test(Slash, description="test"):
 
 
 class Echo(Slash):
+    choices: Literal["test", "hello"]
     message: str = "Test"
     number: int = 1
 
     async def callback(self, interaction: discord.Interaction) -> Any:
-        return await interaction.response.send_message(f"{self.message} {self.number}")
+        return await interaction.response.send_message(
+            f"{self.message} {self.number} {self.choices}"
+        )
