@@ -1,6 +1,7 @@
 """Collection of Object."""
 from __future__ import annotations
 
+import copy
 import sqlite3
 from typing import Dict, Iterable
 
@@ -57,6 +58,8 @@ class AppBot(commands.Bot):
         if not data:
             return
 
+        dataOpts = data.get("options", [])
+
         # TODO: handle subcommand and subcommand group
         try:
             command: ApplicationCommand = self._slash[interaction.data["name"]]  # type: ignore
@@ -66,26 +69,31 @@ class AppBot(commands.Bot):
                 ephemeral=True,
             )
         else:
-            # Deep copy options
-            options = {name: option.copy() for name, option in command._options.items()}
+            # Try to get subcommand or subcommand group
+            for c in dataOpts:
+                if c["type"] > 2:
+                    continue
 
-        root = data.get("name")
+                try:
+                    command = command._subcommands[c["name"]]
+                except KeyError:
+                    raise ValueError("Failed to get subcommand") from None
+                options = copy.deepcopy(command._options)
+                dataOpts = c.get("options", {})
+
+            # Deep copy options
+            options = copy.deepcopy(command._options)
 
         resolved = data.get("resolved")
 
-        cmd = [root]
-        for s in data.get("options", []):
+        for s in dataOpts:
             optName = s["name"]
-            # Subcommand or Subcommand group
-            if s["type"] <= 2:
-                cmd.append(optName)
-                continue
 
-            # Construct Member/User object out of resolved data
             if 3 <= s["type"] <= 5:
                 if (value := s.get("value")) is not None:
                     options[optName].value = value
             elif s["type"] == 6:
+                # Construct Member/User object out of resolved data
                 if not resolved:
                     continue
 

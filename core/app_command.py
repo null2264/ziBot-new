@@ -39,7 +39,7 @@ class Option:
     type: int = MISSING
     default: Any = MISSING
     options: List[Option] = MISSING
-    value: Any = MISSING
+    value: Optional[Any] = None
     choices: List[Choice] = MISSING
 
     @property
@@ -174,6 +174,8 @@ class ApplicationCommand(type):
         __app_name__: str
         __app_description__: Optional[str]
         __app_options__: Dict[str, Option]
+        __app_subcommand__: int
+        _subcommands: Dict[str, Any]
 
     def __new__(
         cls: type,
@@ -207,6 +209,13 @@ class ApplicationCommand(type):
 
         # If type is not specified, assume its a slash command
         appType = attrs["__app_type__"] = attrs.get("__app_type__", 1)
+        if appType == 1:
+            # `__app_subcommand__` values:
+            # 0: ROOT
+            # 1: SUB_COMMAND
+            # 2: SUB_COMMAND_GROUP
+            attrs["__app_subcommand__"] = 0
+            attrs["_subcommands"] = {}
 
         appName = name or className
         attrs["__app_name__"] = appName.lower() if appType == 1 else appName
@@ -242,11 +251,21 @@ class ApplicationCommand(type):
 
         Useful when registering Slash to discord
         """
+        options = []
+        for option in list(self._options.values()) + list(
+            getattr(self, "_subcommands", {}).values()
+        ):
+            if isinstance(option, Option):
+                options.append(option._toDict())
+            else:
+                opt = option._toDict()
+                opt["type"] = option.__app_subcommand__
+                options.append(opt)
         return {
             "type": self._type,
             "name": self._name,
             "description": self._description or "No description",
-            "options": [option._toDict() for option in list(self._options.values())],
+            "options": options,
         }
 
 
@@ -258,12 +277,20 @@ class Slash(metaclass=ApplicationCommand):
     # inside `ext/slash.py`
     __commands__ = (Test,)  # Optional, but should faster if it's included
 
-    class Test(Slash, name="test"):
+    class Test(Slash, name=..., description=...):
         option1: str = Option("channel", default="What")
         option2: Optional[str]
 
-        def callback(self, interaction, options):
-            await interaction.response.send_message(options.option1)
+        async def callback(self, interaction):
+            await interaction.response.send_message(self.option1)
+
+    class Animal(Slash, description="Get random animal pictures"):
+        ...
+
+    @Animal.subcommand(type=...)
+    class Cat(Slash, description="Get random cat pictures"):
+        async def callback(self, interaction):
+            ...
 
     # inside `main.py`
     bot = AppBot()
@@ -273,6 +300,18 @@ class Slash(metaclass=ApplicationCommand):
 
     __app_type__: int = 1
 
+    @classmethod
+    def subcommand(cls, child, type: int = 1):
+        if not getattr(cls, "_subcommands", False):
+            cls._subcommands = {}
+
+        def decorator(cls, child):
+            child.__app_subcommand__ = type
+            cls._subcommands[child._name] = child
+            return child
+
+        return decorator(cls, child)
+
 
 class WrappedOptions:
     def __init__(self, options) -> None:
@@ -281,17 +320,28 @@ class WrappedOptions:
     def __getattr__(self, option) -> Any:
         opt = self._options.get(option)
         if opt:
-            if not opt.isRequired and opt.value is MISSING:
-                return opt.default
-            return opt.value
+            return opt.value or opt.default
         return None
 
 
 class Test(Slash, description="test"):
+    ...
+
+
+@Test.subcommand
+class Test2(Test):
     member: discord.Member
 
     async def callback(self, interaction: discord.Interaction) -> Any:
         return await interaction.response.send_message(self.member.mention)
+
+
+@Test.subcommand
+class Test3(Test):
+    name: str = "Test"
+
+    async def callback(self, interaction: discord.Interaction) -> Any:
+        return await interaction.response.send_message(self.name)
 
 
 class Echo(Slash):
