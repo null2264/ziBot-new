@@ -2,13 +2,15 @@
 from __future__ import annotations
 
 import copy
+import importlib
 import sqlite3
-from typing import Dict, Iterable
+from inspect import isclass
+from typing import Dict, Iterable, Optional
 
 import discord
 from discord.ext import commands
 
-from .app_command import ApplicationCommand, WrappedOptions
+from .app_command import ApplicationCommand, Slash, WrappedOptions
 
 
 PRIVATE_CMDS = "/applications/{app}/guilds/{guild}/commands"
@@ -24,15 +26,43 @@ class Connection(sqlite3.Connection):
         self.row_factory = sqlite3.Row
 
 
+def _slash_from_module(path: str):
+    try:
+        module = importlib.import_module(path)
+    except ImportError:
+        return None
+
+    actualCommands = []
+    commands = getattr(module, "__commands__", None)
+    if not commands:
+        commands = [getattr(module, name) for name in dir(module)]
+    for command in commands:
+        if (
+            isclass(command)
+            and issubclass(command, (Slash,))
+            and getattr(command, "__app_subcommand__", 0) <= 0
+        ):
+            actualCommands.append(command)
+    return actualCommands
+
+
 class AppBot(commands.Bot):
     """Subclass of `commands.Bot` that supports Application Commands."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, slashGuild: Optional[int] = None, **kwargs):
         super().__init__(**kwargs)
+        self.slashGuild = slashGuild
         self._slash: Dict[str, ApplicationCommand] = {}
 
+    def loadApp(self, modules: Iterable[str]):
+        for modulePath in modules:
+            slash = _slash_from_module(modulePath)
+            if not slash:
+                continue
+            self._slash.update({s._name: s for s in slash})
+
     async def registerSlash(
-        self, slashCmds: Iterable[ApplicationCommand], guildId: int = None
+        self, slashCmds: Iterable[ApplicationCommand], guildId: Optional[int] = None
     ):
         """Register slash commands"""
         me: discord.ClientUser = self.user  # type: ignore

@@ -17,7 +17,6 @@ from databases import Database, DatabaseURL
 from discord.ext import commands, tasks
 
 import config
-from core.app_command import Echo, Test
 from core.colour import ZColour
 from core.context import Context
 from core.errors import CCommandDisabled, CCommandNotFound, CCommandNotInGuild
@@ -79,8 +78,6 @@ class ziBot(AppBot):
         # custom intents, required since dpy v1.5
         intents = discord.Intents.all()
 
-        # Should be inside AppBotMixin but it refused to work
-
         super().__init__(
             command_prefix=_callablePrefix,
             description=(
@@ -91,6 +88,8 @@ class ziBot(AppBot):
             intents=intents,
             heartbeat_timeout=150.0,
         )
+
+        self.loadApp(modules=["exts.slash"])
 
         # make cogs case insensitive
         self._BotBase__cogs: commands.core._CaseInsensitiveDict = (
@@ -226,7 +225,7 @@ class ziBot(AppBot):
         if owner and owner.id not in self.owner_ids:
             self.owner_ids += (owner.id,)
 
-        await self.registerSlash([Test, Echo], guildId=807260318270619748)
+        await self.registerSlash(list(self._slash.values()), guildId=807260318270619748)
         # await self.registerSlash([hello, Test()])
 
         # change bot's presence into guild live count

@@ -1,11 +1,9 @@
 """My slash command implementation"""
 from __future__ import annotations
 
-import abc
-import asyncio
 import inspect
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Set, Tuple, Union
 
 import discord
@@ -275,8 +273,6 @@ class Slash(metaclass=ApplicationCommand):
     Planned usage:
 
     # inside `ext/slash.py`
-    __commands__ = (Test,)  # Optional, but should faster if it's included
-
     class Test(Slash, name=..., description=...):
         option1: str = Option("channel", default="What")
         option2: Optional[str]
@@ -291,6 +287,8 @@ class Slash(metaclass=ApplicationCommand):
     class Cat(Slash, description="Get random cat pictures"):
         async def callback(self, interaction):
             ...
+
+    __commands__ = (Test,)  # Optional, but should faster if it's included
 
     # inside `main.py`
     bot = AppBot()
@@ -322,34 +320,3 @@ class WrappedOptions:
         if opt:
             return opt.value or opt.default
         return None
-
-
-class Test(Slash, description="test"):
-    ...
-
-
-@Test.subcommand
-class Test2(Test):
-    member: discord.Member
-
-    async def callback(self, interaction: discord.Interaction) -> Any:
-        return await interaction.response.send_message(self.member.mention)
-
-
-@Test.subcommand
-class Test3(Test):
-    name: str = "Test"
-
-    async def callback(self, interaction: discord.Interaction) -> Any:
-        return await interaction.response.send_message(self.name)
-
-
-class Echo(Slash):
-    choices: Literal["test", "hello"]
-    message: str = "Test"
-    number: int = 1
-
-    async def callback(self, interaction: discord.Interaction) -> Any:
-        return await interaction.response.send_message(
-            f"{self.message} {self.number} {self.choices}"
-        )
