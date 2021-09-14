@@ -211,12 +211,20 @@ class Slash(metaclass=ApplicationCommand):
 
     Planned usage:
 
+    # inside `ext/slash.py`
+    __commands__ = (Test,)  # Optional, but should faster if it's included
+
     class Test(Slash, name="test"):
         option1: str = Option("channel", default="What")
         option2: Optional[str]
 
         def callback(self, interaction, options):
             await interaction.response.send_message(options.option1)
+
+    # inside `main.py`
+    bot = AppBot()
+    bot.initSlash(modules=['ext.slash'])
+    bot.run("TOKEN")
     """
 
     __app_type__: int = 1
