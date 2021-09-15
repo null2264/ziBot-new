@@ -99,7 +99,7 @@ class AppBot(commands.Bot):
         try:
             command: ApplicationCommand = self._appCmds.get(data["name"])  # type: ignore
             if not command:
-                self._guildAppCmds[interaction.guild_id][data["name"]]  # type: ignore
+                command = self._guildAppCmds[interaction.guild_id][data["name"]]  # type: ignore
         except KeyError:
             return await interaction.response.send_message(
                 "Invalid command, slash command takes awhile to update. Please try again later",
