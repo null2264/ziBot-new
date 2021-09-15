@@ -7,35 +7,35 @@ import discord
 from core.app_command import Slash
 
 
-class Test(Slash, description="test"):
+class Animal(Slash, description="Get a random animal picture"):
     ...
 
 
-@Test.subcommand
-class Test2(Test):
-    member: discord.Member
-
+@Animal.subcommand
+class Cat(Animal, description="Get a random cat picture"):
     async def callback(self, interaction: discord.Interaction) -> Any:
-        return await interaction.response.send_message(self.member.mention)
+        await interaction.response.defer()
+        req = await self._bot.session.get("https://thatcopy.pw/catapi/rest/")
+        url = (await req.json())["url"]
+        e = discord.Embed().set_image(url=url)
+        return await interaction.followup.send(embed=e)
 
 
-@Test.subcommand
-class Test3(Test):
-    name: str = "Test"
-
+@Animal.subcommand
+class Dog(Animal, description="Get a random dog picture"):
     async def callback(self, interaction: discord.Interaction) -> Any:
-        return await interaction.response.send_message(self.name)
+        await interaction.response.defer()
+        req = await self._bot.session.get("https://random.dog/woof.json")
+        url = (await req.json())["url"]
+        e = discord.Embed().set_image(url=url)
+        return await interaction.followup.send(embed=e)
 
 
 class Echo(Slash):
-    choices: Literal["test", "hello"]
-    message: str = "Test"
-    number: int = 1
+    message: str
 
     async def callback(self, interaction: discord.Interaction) -> Any:
-        return await interaction.response.send_message(
-            f"{self.message} {self.number} {self.choices}"
-        )
+        await interaction.followup.send(self.message)
 
 
-# __commands__ = (Test, Echo)
+__commands__ = (Animal, Echo)

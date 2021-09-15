@@ -10,6 +10,10 @@ import discord
 from discord.utils import MISSING, resolve_annotation
 
 
+if TYPE_CHECKING:
+    from .bot import ziBot
+
+
 @dataclass
 class Choice:
     """Dataclass for 'CHAT-INPUT' application commands' choice"""
@@ -297,6 +301,8 @@ class Slash(metaclass=ApplicationCommand):
     """
 
     __app_type__: int = 1
+    if TYPE_CHECKING:
+        _bot: ziBot
 
     @classmethod
     def subcommand(cls, child, type: int = 1):
@@ -312,11 +318,12 @@ class Slash(metaclass=ApplicationCommand):
 
 
 class WrappedOptions:
-    def __init__(self, options) -> None:
+    def __init__(self, options, bot=None) -> None:
         self._options: Dict[str, Option] = options
+        self._bot = bot
 
     def __getattr__(self, option) -> Any:
         opt = self._options.get(option)
         if opt:
             return opt.value or opt.default
-        return None
+        return super().__getattribute__(option)

@@ -145,7 +145,7 @@ class AppBot(commands.Bot):
                         guild=interaction.guild,  # type: ignore
                         state=interaction._state,
                     )
-        return await command(WrappedOptions(options), interaction)
+        return await command(WrappedOptions(options, bot=self), interaction)
 
     async def on_interaction(self, interaction: discord.Interaction):
         """Mainly used to handle slash command"""
