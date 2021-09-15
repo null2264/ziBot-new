@@ -52,36 +52,41 @@ class AppBot(commands.Bot):
     def __init__(self, slashGuild: Optional[int] = None, **kwargs):
         super().__init__(**kwargs)
         self.slashGuild = slashGuild
-        self._slash: Dict[str, ApplicationCommand] = {}
+        self._guildAppCmds: Dict[int, Dict[str, ApplicationCommand]] = {}
+        self._appCmds: Dict[str, ApplicationCommand] = {}
 
     def loadApp(self, modules: Iterable[str]):
         for modulePath in modules:
             slash = _slash_from_module(modulePath)
             if not slash:
                 continue
-            self._slash.update({s._name: s for s in slash})
+            for s in slash:
+                if s._guilds:
+                    for guild in s._guilds:
+                        try:
+                            self._guildAppCmds[guild][s._name] = s
+                        except KeyError:
+                            self._guildAppCmds[guild] = {s._name: s}
+                else:
+                    self._appCmds[s._name] = s
 
-    async def registerSlash(
-        self, slashCmds: Iterable[ApplicationCommand], guildId: Optional[int] = None
-    ):
+    async def registerSlash(self):
         """Register slash commands"""
         me: discord.ClientUser = self.user  # type: ignore
 
-        fmt = []
+        fmt = [cmd._toDict() for cmd in self._appCmds.values()]
 
-        for slash in slashCmds:
-            fmt.append(slash._toDict())
-
-            self._slash[slash._name] = slash
-
-        if guildId:
-            r = discord.http.Route(  # type: ignore
-                "PUT", PRIVATE_CMDS, app=me.id, guild=guildId
-            )
-        else:
-            r = discord.http.Route("PUT", CMDS, app=me.id)  # type: ignore
+        r = discord.http.Route("PUT", CMDS, app=me.id)  # type: ignore
 
         await self.http.request(r, json=fmt)
+
+        for guild, cmds in self._guildAppCmds.items():
+            fmt = [cmd._toDict() for cmd in cmds.values()]
+            r = discord.http.Route(  # type: ignore
+                "PUT", PRIVATE_CMDS, app=me.id, guild=guild
+            )
+
+            await self.http.request(r, json=fmt)
 
     async def process_app_commands(self, interaction: discord.Interaction):
         data = interaction.data
@@ -92,7 +97,7 @@ class AppBot(commands.Bot):
 
         # TODO: handle subcommand and subcommand group
         try:
-            command: ApplicationCommand = self._slash[interaction.data["name"]]  # type: ignore
+            command: ApplicationCommand = self._appCmds.get(data["name"], self._guildAppCmds[interaction.guild_id][data["name"]])  # type: ignore
         except KeyError:
             return await interaction.response.send_message(
                 "Invalid command, slash command takes awhile to update. Please try again later",
@@ -151,3 +156,8 @@ class AppBot(commands.Bot):
         """Mainly used to handle slash command"""
         if interaction.type == discord.InteractionType.application_command:
             return await self.process_app_commands(interaction)
+
+    async def start(self, token: str, *, reconnect: bool = True) -> None:
+        await self.login(token)
+        await self.registerSlash()
+        await self.connect(reconnect=reconnect)

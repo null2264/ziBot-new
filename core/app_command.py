@@ -177,6 +177,7 @@ class ApplicationCommand(type):
         __app_description__: Optional[str]
         __app_options__: Dict[str, Option]
         __app_subcommand__: int
+        __app_guilds__: Optional[List[int]]
         _subcommands: Dict[str, Any]
 
     def __new__(
@@ -187,6 +188,7 @@ class ApplicationCommand(type):
         *,
         name: Optional[str] = None,
         description: Optional[str] = None,
+        guilds: Optional[List[int]] = None,
     ):
         try:
             global_ns = sys.modules[attrs["__module__"]].__dict__
@@ -223,6 +225,7 @@ class ApplicationCommand(type):
         attrs["__app_name__"] = appName.lower() if appType == 1 else appName
         attrs["__app_description__"] = description
         attrs["__app_options__"] = options
+        attrs["__app_guilds__"] = guilds
 
         return type.__new__(cls, className, bases, attrs)  # type: ignore
 
@@ -247,6 +250,10 @@ class ApplicationCommand(type):
     @property
     def _type(self) -> int:
         return self.__app_type__
+
+    @property
+    def _guilds(self) -> Optional[List[int]]:
+        return self.__app_guilds__
 
     def _toDict(self) -> Dict[str, Any]:
         """Convert Slash object into dict.

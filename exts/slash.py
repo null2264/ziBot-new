@@ -31,7 +31,7 @@ class Dog(Animal, description="Get a random dog picture"):
         return await interaction.followup.send(embed=e)
 
 
-class Echo(Slash):
+class Echo(Slash, guilds=[807260318270619748, 745481731133669476]):
     message: str
 
     async def callback(self, interaction: discord.Interaction) -> Any:

@@ -225,7 +225,7 @@ class ziBot(AppBot):
         if owner and owner.id not in self.owner_ids:
             self.owner_ids += (owner.id,)
 
-        await self.registerSlash(list(self._slash.values()), guildId=807260318270619748)
+        # await self.registerSlash(list(self._slash.values()), guildId=807260318270619748)
         # await self.registerSlash([hello, Test()])
 
         # change bot's presence into guild live count
