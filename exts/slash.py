@@ -35,7 +35,7 @@ class Echo(Slash):
     message: str
 
     async def callback(self, interaction: discord.Interaction) -> Any:
-        await interaction.followup.send(self.message)
+        await interaction.response.send_message(self.message)
 
 
 __commands__ = (Animal, Echo)
