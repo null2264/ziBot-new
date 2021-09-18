@@ -10,7 +10,7 @@ from typing import Dict, Iterable, Optional
 import discord
 from discord.ext import commands
 
-from .app_command import ApplicationCommand, Slash, WrappedOptions
+from .app_command import ApplicationCommand, Slash, WrappedOptions, _command_to_dict
 
 
 PRIVATE_CMDS = "/applications/{app}/guilds/{guild}/commands"
@@ -61,27 +61,28 @@ class AppBot(commands.Bot):
             if not slash:
                 continue
             for s in slash:
-                if s._guilds:
-                    for guild in s._guilds:
+                s = s()
+                if s.__app_guilds__:
+                    for guild in s.__app_guilds__:
                         try:
-                            self._guildAppCmds[guild][s._name] = s
+                            self._guildAppCmds[guild][s.__app_name__] = s
                         except KeyError:
-                            self._guildAppCmds[guild] = {s._name: s}
+                            self._guildAppCmds[guild] = {s.__app_name__: s}
                 else:
-                    self._appCmds[s._name] = s
+                    self._appCmds[s.__app_name__] = s
 
     async def registerSlash(self):
         """Register slash commands"""
         me: discord.ClientUser = self.user  # type: ignore
 
-        fmt = [cmd._toDict() for cmd in self._appCmds.values()]
+        fmt = [_command_to_dict(cmd) for cmd in self._appCmds.values()]
 
         r = discord.http.Route("PUT", CMDS, app=me.id)  # type: ignore
 
         await self.http.request(r, json=fmt)
 
         for guild, cmds in self._guildAppCmds.items():
-            fmt = [cmd._toDict() for cmd in cmds.values()]
+            fmt = [_command_to_dict(cmd) for cmd in cmds.values()]
             r = discord.http.Route(  # type: ignore
                 "PUT", PRIVATE_CMDS, app=me.id, guild=guild
             )
@@ -115,11 +116,11 @@ class AppBot(commands.Bot):
                     command = command._subcommands[c["name"]]
                 except KeyError:
                     raise ValueError("Failed to get subcommand") from None
-                options = copy.deepcopy(command._options)
+                options = copy.deepcopy(command.__app_options__)
                 dataOpts = c.get("options", {})
 
             # Deep copy options
-            options = copy.deepcopy(command._options)
+            options = copy.deepcopy(command.__app_options__)
 
         resolved = data.get("resolved")
 
@@ -152,7 +153,7 @@ class AppBot(commands.Bot):
                         guild=interaction.guild,  # type: ignore
                         state=interaction._state,
                     )
-        return await command(WrappedOptions(options, bot=self), interaction)
+        return await command(interaction, WrappedOptions(options, bot=self))
 
     async def on_interaction(self, interaction: discord.Interaction):
         """Mainly used to handle slash command"""

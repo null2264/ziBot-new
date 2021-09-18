@@ -1,6 +1,7 @@
 """My slash command implementation"""
 from __future__ import annotations
 
+import abc
 import inspect
 import sys
 from dataclasses import dataclass
@@ -14,6 +15,29 @@ if TYPE_CHECKING:
     from .bot import ziBot
 
 
+def _command_to_dict(command) -> Dict[str, Any]:
+    """Convert Slash object into dict.
+
+    Useful when registering Slash to discord
+    """
+    options = []
+    for option in list(command.__app_options__.values()) + list(
+        getattr(command, "_subcommands", {}).values()
+    ):
+        if isinstance(option, Option):
+            options.append(option.toDict())
+        else:
+            opt = _command_to_dict(option)
+            opt["type"] = option.__app_subcommand__
+            options.append(opt)
+    return {
+        "type": command.__app_type__,
+        "name": command.__app_name__,
+        "description": command.__app_description__ or "No description",
+        "options": options,
+    }
+
+
 @dataclass
 class Choice:
     """Dataclass for 'CHAT-INPUT' application commands' choice"""
@@ -21,7 +45,7 @@ class Choice:
     name: str = MISSING
     value: Any = MISSING
 
-    def _toDict(self) -> Dict[str, Any]:
+    def toDict(self) -> Dict[str, Any]:
         return {
             "name": self.name,
             "value": self.value,
@@ -48,7 +72,7 @@ class Option:
     def isRequired(self) -> bool:
         return self.default is MISSING
 
-    def _toDict(self) -> Dict[str, Any]:
+    def toDict(self) -> Dict[str, Any]:
         dict_ = {
             "name": self.name,
             "description": self.description or "No description",
@@ -56,9 +80,9 @@ class Option:
             "required": self.isRequired,
         }
         if self.options is not MISSING:
-            dict_["options"] = [option._toDict() for option in self.options]
+            dict_["options"] = [option.toDict() for option in self.options]
         if self.choices is not MISSING:
-            dict_["choices"] = [choice._toDict() for choice in self.choices]
+            dict_["choices"] = [choice.toDict() for choice in self.choices]
         return dict_
 
     def copy(self):
@@ -229,53 +253,8 @@ class ApplicationCommand(type):
 
         return type.__new__(cls, className, bases, attrs)  # type: ignore
 
-    async def __call__(self, *args) -> Any:
-        return await self.callback(*args)
-
-    async def callback(self, interaction: discord.Interaction) -> Any:
-        pass
-
-    @property
-    def _name(self) -> str:
-        return self.__app_name__
-
-    @property
-    def _description(self) -> Optional[str]:
-        return self.__app_description__
-
-    @property
-    def _options(self) -> Dict[str, Option]:
-        return self.__app_options__
-
-    @property
-    def _type(self) -> int:
-        return self.__app_type__
-
-    @property
-    def _guilds(self) -> Optional[List[int]]:
-        return self.__app_guilds__
-
-    def _toDict(self) -> Dict[str, Any]:
-        """Convert Slash object into dict.
-
-        Useful when registering Slash to discord
-        """
-        options = []
-        for option in list(self._options.values()) + list(
-            getattr(self, "_subcommands", {}).values()
-        ):
-            if isinstance(option, Option):
-                options.append(option._toDict())
-            else:
-                opt = option._toDict()
-                opt["type"] = option.__app_subcommand__
-                options.append(opt)
-        return {
-            "type": self._type,
-            "name": self._name,
-            "description": self._description or "No description",
-            "options": options,
-        }
+    async def callback(self, *args, **kwargs) -> Any:
+        raise NotImplementedError
 
 
 class Slash(metaclass=ApplicationCommand):
@@ -311,14 +290,18 @@ class Slash(metaclass=ApplicationCommand):
     if TYPE_CHECKING:
         _bot: ziBot
 
+    async def __call__(self, *args, **kwargs) -> Any:
+        return await self.callback(*args, **kwargs)
+
     @classmethod
     def subcommand(cls, child, type: int = 1):
         if not getattr(cls, "_subcommands", False):
             cls._subcommands = {}
 
         def decorator(cls, child):
+            child = child()
             child.__app_subcommand__ = type
-            cls._subcommands[child._name] = child
+            cls._subcommands[child.__app_name__] = child
             return child
 
         return decorator(cls, child)

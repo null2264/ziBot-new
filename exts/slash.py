@@ -13,9 +13,9 @@ class Animal(Slash, description="Get a random animal picture"):
 
 @Animal.subcommand
 class Cat(Animal, description="Get a random cat picture"):
-    async def callback(self, interaction: discord.Interaction) -> Any:
+    async def callback(self, interaction: discord.Interaction, options) -> Any:
         await interaction.response.defer()
-        req = await self._bot.session.get("https://thatcopy.pw/catapi/rest/")
+        req = await options._bot.session.get("https://thatcopy.pw/catapi/rest/")
         url = (await req.json())["url"]
         e = discord.Embed().set_image(url=url)
         return await interaction.followup.send(embed=e)
@@ -23,9 +23,9 @@ class Cat(Animal, description="Get a random cat picture"):
 
 @Animal.subcommand
 class Dog(Animal, description="Get a random dog picture"):
-    async def callback(self, interaction: discord.Interaction) -> Any:
+    async def callback(self, interaction: discord.Interaction, options) -> Any:
         await interaction.response.defer()
-        req = await self._bot.session.get("https://random.dog/woof.json")
+        req = await options._bot.session.get("https://random.dog/woof.json")
         url = (await req.json())["url"]
         e = discord.Embed().set_image(url=url)
         return await interaction.followup.send(embed=e)
@@ -34,8 +34,8 @@ class Dog(Animal, description="Get a random dog picture"):
 class Echo(Slash, guilds=[807260318270619748, 745481731133669476]):
     message: str
 
-    async def callback(self, interaction: discord.Interaction) -> Any:
-        await interaction.response.send_message(self.message)
+    async def callback(self, interaction: discord.Interaction, options) -> Any:
+        await interaction.response.send_message(options.message)
 
 
 __commands__ = (Animal, Echo)
