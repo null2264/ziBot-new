@@ -53,6 +53,21 @@ def _slash_from_module(path: str):
     return actualCommands
 
 
+def _memberFromResolved(id, guild, state, resolved) -> Optional[discord.Member]:
+    _user = resolved["users"][id]  # type: ignore
+    try:
+        _member = resolved.get("members", {}).get(id)  # type: ignore
+    except KeyError:
+        return
+    else:
+        _member["user"] = _user
+        return discord.Member(
+            data=_member,
+            guild=guild,
+            state=state,
+        )
+
+
 class AppBot(commands.Bot):
     """Subclass of `commands.Bot` that supports Application Commands."""
 
@@ -142,20 +157,9 @@ class AppBot(commands.Bot):
                 if not userId:
                     raise ValueError("Invalid User")
 
-                _user = resolved["users"][userId]  # type: ignore
-                try:
-                    _member = resolved.get("members", {}).get(userId)  # type: ignore
-                except KeyError:
-                    options[optName].value = discord.User(
-                        state=interaction._state, data=_user
-                    )
-                else:
-                    _member["user"] = _user
-                    options[optName].value = discord.Member(
-                        data=_member,
-                        guild=interaction.guild,  # type: ignore
-                        state=interaction._state,
-                    )
+                options[optName].value = _memberFromResolved(
+                    userId, interaction.guild, interaction._state, resolved
+                )
         return await command(interaction, WrappedOptions(options, bot=self))
 
     async def process_app_commands(self, interaction: discord.Interaction):

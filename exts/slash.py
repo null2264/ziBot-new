@@ -43,4 +43,11 @@ class Hello(UserCommand, guilds=[807260318270619748, 745481731133669476]):
         await interaction.response.send_message("test")
 
 
-__commands__ = (Animal, Echo, Hello)
+class Member(Slash, guilds=[807260318270619748, 745481731133669476]):
+    member: discord.Member
+
+    async def callback(self, inter, opts):
+        await inter.response.send_message(opts.member.mention)
+
+
+__commands__ = (Animal, Echo, Hello, Member)
