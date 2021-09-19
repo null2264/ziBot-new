@@ -122,16 +122,16 @@ class AppBot(commands.Bot):
         self, name, guildId: Optional[int] = None
     ) -> Union[ApplicationCommand, Slash]:
         try:
-            command = self._appCmds.get(name)  # type: ignore
+            command = self._appCmds.get(name)
             if not command and guildId is not None:
-                command = self._guildAppCmds[guildId][name]  # type: ignore
-            else:
+                command = self._guildAppCmds[guildId][name]
+            elif guildId is None:
                 raise KeyError
         except KeyError:
             raise ValueError(
                 "Invalid command, slash command takes awhile to update. Please try again later"
             ) from None
-        return command
+        return command  # type: ignore
 
     async def process_app_commands(self, interaction: discord.Interaction):
         data = interaction.data
@@ -141,7 +141,7 @@ class AppBot(commands.Bot):
         dataOpts = data.get("options", [])
 
         try:
-            command = self.getAppCommand(data["name"], interaction.guild_id)
+            command = self.getAppCommand(data["name"], interaction.guild_id)  # type: ignore
         except ValueError as err:
             return await interaction.response.send_message(
                 str(err),
