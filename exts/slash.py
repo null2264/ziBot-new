@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 import discord
 
-from core.app_command import Slash
+from core.app_command import Slash, UserCommand
 
 
 class Animal(Slash, description="Get a random animal picture"):
@@ -12,7 +12,7 @@ class Animal(Slash, description="Get a random animal picture"):
 
 
 @Animal.subcommand
-class Cat(Animal, description="Get a random cat picture"):
+class Cat(Slash, description="Get a random cat picture"):
     async def callback(self, interaction: discord.Interaction, options) -> Any:
         await interaction.response.defer()
         req = await options._bot.session.get("https://thatcopy.pw/catapi/rest/")
@@ -22,7 +22,7 @@ class Cat(Animal, description="Get a random cat picture"):
 
 
 @Animal.subcommand
-class Dog(Animal, description="Get a random dog picture"):
+class Dog(Slash, description="Get a random dog picture"):
     async def callback(self, interaction: discord.Interaction, options) -> Any:
         await interaction.response.defer()
         req = await options._bot.session.get("https://random.dog/woof.json")
@@ -38,4 +38,9 @@ class Echo(Slash, guilds=[807260318270619748, 745481731133669476]):
         await interaction.response.send_message(options.message)
 
 
-__commands__ = (Animal, Echo)
+class Hello(UserCommand, guilds=[807260318270619748, 745481731133669476]):
+    async def callback(self, interaction: discord.Interaction) -> Any:
+        await interaction.response.send_message("test")
+
+
+__commands__ = (Animal, Echo, Hello)

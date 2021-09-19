@@ -1,7 +1,6 @@
 """My slash command implementation"""
 from __future__ import annotations
 
-import abc
 import inspect
 import sys
 from dataclasses import dataclass
@@ -20,22 +19,24 @@ def _command_to_dict(command) -> Dict[str, Any]:
 
     Useful when registering Slash to discord
     """
-    options = []
-    for option in list(command.__app_options__.values()) + list(
-        getattr(command, "_subcommands", {}).values()
-    ):
-        if isinstance(option, Option):
-            options.append(option.toDict())
-        else:
-            opt = _command_to_dict(option)
-            opt["type"] = option.__app_subcommand__
-            options.append(opt)
-    return {
+    _dict = {
         "type": command.__app_type__,
         "name": command.__app_name__,
-        "description": command.__app_description__ or "No description",
-        "options": options,
     }
+    if command.__app_type__ == 1:
+        options = []
+        for option in list(command.__app_options__.values()) + list(
+            getattr(command, "__app_subcommands__", {}).values()
+        ):
+            if isinstance(option, Option):
+                options.append(option.toDict())
+            else:
+                opt = _command_to_dict(option)
+                opt["type"] = option.__app_subcommand_type__
+                options.append(opt)
+        _dict["options"] = options
+        _dict["description"] = command.__app_description__ or "No description"
+    return _dict
 
 
 @dataclass
@@ -194,16 +195,7 @@ def getOptions(
     return options
 
 
-class ApplicationCommand(type):
-    if TYPE_CHECKING:
-        __app_type__: int
-        __app_name__: str
-        __app_description__: Optional[str]
-        __app_options__: Dict[str, Option]
-        __app_subcommand__: int
-        __app_guilds__: Optional[List[int]]
-        _subcommands: Dict[str, Any]
-
+class ApplicationCommandMeta(type):
     def __new__(
         cls: type,
         className: str,
@@ -214,6 +206,8 @@ class ApplicationCommand(type):
         description: Optional[str] = None,
         guilds: Optional[List[int]] = None,
     ):
+        appName = name or className
+
         try:
             global_ns = sys.modules[attrs["__module__"]].__dict__
         except KeyError:
@@ -231,33 +225,25 @@ class ApplicationCommand(type):
         finally:
             del frame
 
+        # `__app_subcommand_type__` values:
+        # 0: ROOT
+        # 1: SUB_COMMAND
+        # 2: SUB_COMMAND_GROUP
+        attrs["__app_subcommand_type__"] = 0
+        attrs["__app_subcommands__"] = {}
         options = {}
         for optionName, option in getOptions(attrs, global_ns, local_ns).items():
             options[optionName] = option
-
-        # If type is not specified, assume its a slash command
-        appType = attrs["__app_type__"] = attrs.get("__app_type__", 1)
-        if appType == 1:
-            # `__app_subcommand__` values:
-            # 0: ROOT
-            # 1: SUB_COMMAND
-            # 2: SUB_COMMAND_GROUP
-            attrs["__app_subcommand__"] = 0
-            attrs["_subcommands"] = {}
-
-        appName = name or className
-        attrs["__app_name__"] = appName.lower() if appType == 1 else appName
-        attrs["__app_description__"] = description
         attrs["__app_options__"] = options
+
+        attrs["__app_name__"] = appName
+        attrs["__app_description__"] = description
         attrs["__app_guilds__"] = guilds
 
         return type.__new__(cls, className, bases, attrs)  # type: ignore
 
-    async def callback(self, *args, **kwargs) -> Any:
-        raise NotImplementedError
 
-
-class Slash(metaclass=ApplicationCommand):
+class ApplicationCommand(metaclass=ApplicationCommandMeta):
     """Class for 'CHAT-INPUT' application commands.
 
     Planned usage:
@@ -286,25 +272,22 @@ class Slash(metaclass=ApplicationCommand):
     bot.run("TOKEN")
     """
 
-    __app_type__: int = 1
     if TYPE_CHECKING:
-        _bot: ziBot
+        __app_type__: int
+        __app_name__: str
+        __app_description__: Optional[str]
+        __app_guilds__: Optional[List[int]]
+        # _bot: ziBot
 
-    async def __call__(self, *args, **kwargs) -> Any:
-        return await self.callback(*args, **kwargs)
+    def __init__(self):
+        if self.__app_type__ == 1:
+            self.__app_name__ = self.__app_name__.lower()
 
-    @classmethod
-    def subcommand(cls, child, type: int = 1):
-        if not getattr(cls, "_subcommands", False):
-            cls._subcommands = {}
+    async def __call__(self, interaction: discord.Interaction) -> Any:
+        return await self.callback(interaction)
 
-        def decorator(cls, child):
-            child = child()
-            child.__app_subcommand__ = type
-            cls._subcommands[child.__app_name__] = child
-            return child
-
-        return decorator(cls, child)
+    async def callback(self, interaction: discord.Interaction) -> Any:
+        raise NotImplementedError
 
 
 class WrappedOptions:
@@ -317,3 +300,66 @@ class WrappedOptions:
         if opt:
             return opt.value or opt.default
         return super().__getattribute__(option)
+
+
+# Slash
+# SlashGroup
+# ├─ Slash
+# SlashSubGroup
+# ├─ SlashGroup
+# │  ├─ Slash
+
+
+class Slash(ApplicationCommand):
+    if TYPE_CHECKING:
+        __app_options__: Dict[str, Option]
+        __app_subcommand_type__: int
+        __app_subcommands__: Dict[str, Any]
+
+    __app_type__ = 1
+
+    async def __call__(
+        self, interaction: discord.Interaction, options: WrappedOptions
+    ) -> Any:
+        return await self.callback(interaction, options)
+
+    async def callback(
+        self, interaction: discord.Interaction, options: WrappedOptions
+    ) -> Any:
+        raise NotImplementedError
+
+    @classmethod
+    def subcommand(cls, child, type: int = 1):
+        if not getattr(cls, "_subcommands", False):
+            cls._subcommands = {}
+
+        def decorator(cls, child):
+            child = child()
+            child.__app_subcommand_type__ = type
+            cls.__app_subcommands__[child.__app_name__] = child
+            return child
+
+        return decorator(cls, child)
+
+
+# class SlashGroup(ApplicationCommand):
+#     ...
+
+
+# class SlashSubGroup(ApplicationCommand):
+#     ...
+
+
+class MessageCommand(ApplicationCommand):
+    __app_type__ = 3
+
+
+class UserCommand(ApplicationCommand):
+    __app_type__ = 2
+
+
+# class Test(Slash):
+#     ...
+
+
+# print(_command_to_dict(Test()))

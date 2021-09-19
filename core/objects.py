@@ -10,7 +10,14 @@ from typing import Dict, Iterable, Optional
 import discord
 from discord.ext import commands
 
-from .app_command import ApplicationCommand, Slash, WrappedOptions, _command_to_dict
+from .app_command import (
+    ApplicationCommand,
+    MessageCommand,
+    Slash,
+    UserCommand,
+    WrappedOptions,
+    _command_to_dict,
+)
 
 
 PRIVATE_CMDS = "/applications/{app}/guilds/{guild}/commands"
@@ -39,7 +46,7 @@ def _slash_from_module(path: str):
     for command in commands:
         if (
             isclass(command)
-            and issubclass(command, (Slash,))
+            and issubclass(command, (Slash, UserCommand, MessageCommand))
             and getattr(command, "__app_subcommand__", 0) <= 0
         ):
             actualCommands.append(command)
@@ -89,16 +96,12 @@ class AppBot(commands.Bot):
 
             await self.http.request(r, json=fmt)
 
-    async def process_app_commands(self, interaction: discord.Interaction):
-        data = interaction.data
-        if not data:
-            return
-
+    async def process_slash_commands(self, interaction: discord.Interaction, data):
         dataOpts = data.get("options", [])
 
         # TODO: handle subcommand and subcommand group
         try:
-            command: ApplicationCommand = self._appCmds.get(data["name"])  # type: ignore
+            command: Slash = self._appCmds.get(data["name"])  # type: ignore
             if not command:
                 command = self._guildAppCmds[interaction.guild_id][data["name"]]  # type: ignore
         except KeyError:
@@ -113,7 +116,7 @@ class AppBot(commands.Bot):
                     continue
 
                 try:
-                    command = command._subcommands[c["name"]]
+                    command = command.__app_subcommands__[c["name"]]
                 except KeyError:
                     raise ValueError("Failed to get subcommand") from None
                 options = copy.deepcopy(command.__app_options__)
@@ -155,8 +158,19 @@ class AppBot(commands.Bot):
                     )
         return await command(interaction, WrappedOptions(options, bot=self))
 
+    async def process_app_commands(self, interaction: discord.Interaction):
+        # Currently only supports slash
+        # TODO: Support context menu
+        data = interaction.data
+        if not data:
+            return
+
+        if data["type"] == 1:
+            return await self.process_slash_commands(interaction, data)
+
     async def on_interaction(self, interaction: discord.Interaction):
         """Mainly used to handle slash command"""
+        print(interaction.data)
         if interaction.type == discord.InteractionType.application_command:
             return await self.process_app_commands(interaction)
 
