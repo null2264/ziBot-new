@@ -122,7 +122,6 @@ class AppBot(commands.Bot):
         self, name, guildId: Optional[int] = None
     ) -> Union[ApplicationCommand, Slash]:
         try:
-            print(name)
             command = self._appCmds.get(name)  # type: ignore
             if not command and guildId is not None:
                 command = self._guildAppCmds[guildId][name]  # type: ignore
@@ -208,7 +207,6 @@ class AppBot(commands.Bot):
 
     async def on_interaction(self, interaction: discord.Interaction):
         """Mainly used to handle slash command"""
-        print(interaction.data)
         if interaction.type == discord.InteractionType.application_command:
             return await self.process_app_commands(interaction)
 

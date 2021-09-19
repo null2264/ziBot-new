@@ -342,6 +342,7 @@ class Slash(ApplicationCommand):
         return decorator(cls, child)
 
 
+# TODO: Rework slash group
 # class SlashGroup(ApplicationCommand):
 #     ...
 
