@@ -1,5 +1,15 @@
 # v3.3
 
+## 3.3.3
+
+- [**Improved**] Added description to `>caselogs` command
+- [**Improved**] Help command now tell user when they have no usable commands
+
+## 3.3.2
+
+- [**Fixed**] Fixed `AttributeError`
+- [**Fixed**] Fixed `discord.Forbidden` in Error Handler
+
 ## 3.3.1
 
 - [**New**] You can now change news using a command instead of hardcoding it
