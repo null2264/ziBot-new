@@ -283,10 +283,10 @@ class ApplicationCommand(metaclass=ApplicationCommandMeta):
         if self.__app_type__ == 1:
             self.__app_name__ = self.__app_name__.lower()
 
-    async def __call__(self, interaction: discord.Interaction) -> Any:
-        return await self.callback(interaction)
+    async def __call__(self, interaction: discord.Interaction, *args, **kwargs) -> Any:
+        return await self.callback(interaction, *args, **kwargs)
 
-    async def callback(self, interaction: discord.Interaction) -> Any:
+    async def callback(self, interaction: discord.Interaction, *args, **kwargs) -> Any:
         raise NotImplementedError
 
 
@@ -353,9 +353,29 @@ class Slash(ApplicationCommand):
 class MessageCommand(ApplicationCommand):
     __app_type__ = 3
 
+    async def __call__(self, interaction: discord.Interaction, message) -> Any:
+        return await self.callback(interaction, message)
+
+    async def callback(self, interaction: discord.Interaction, message) -> Any:
+        raise NotImplementedError
+
 
 class UserCommand(ApplicationCommand):
     __app_type__ = 2
+
+    async def __call__(
+        self,
+        interaction: discord.Interaction,
+        user: Union[discord.Member, discord.User],
+    ) -> Any:
+        return await self.callback(interaction, user)
+
+    async def callback(
+        self,
+        interaction: discord.Interaction,
+        user: Union[discord.Member, discord.User],
+    ) -> Any:
+        raise NotImplementedError
 
 
 # class Test(Slash):

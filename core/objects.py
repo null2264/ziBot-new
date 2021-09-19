@@ -5,7 +5,7 @@ import copy
 import importlib
 import sqlite3
 from inspect import isclass
-from typing import Dict, Iterable, Optional
+from typing import Dict, Iterable, Optional, Union
 
 import discord
 from discord.ext import commands
@@ -33,7 +33,7 @@ class Connection(sqlite3.Connection):
         self.row_factory = sqlite3.Row
 
 
-def _slash_from_module(path: str):
+def _slashFromModule(path: str):
     try:
         module = importlib.import_module(path)
     except ImportError:
@@ -53,12 +53,14 @@ def _slash_from_module(path: str):
     return actualCommands
 
 
-def _memberFromResolved(id, guild, state, resolved) -> Optional[discord.Member]:
-    _user = resolved["users"][id]  # type: ignore
+def _userFromResolved(
+    id, guild, state, resolved
+) -> Union[discord.Member, discord.User]:
+    _user = resolved["users"][id]
     try:
-        _member = resolved.get("members", {}).get(id)  # type: ignore
+        _member = resolved["members"][id]
     except KeyError:
-        return
+        return discord.User(data=_user, state=state)
     else:
         _member["user"] = _user
         return discord.Member(
@@ -66,6 +68,11 @@ def _memberFromResolved(id, guild, state, resolved) -> Optional[discord.Member]:
             guild=guild,
             state=state,
         )
+
+
+def _messageFromResolved(id, channel, state, resolved) -> discord.Message:
+    _message = resolved["messages"][id]
+    return discord.Message(state=state, channel=channel, data=_message)
 
 
 class AppBot(commands.Bot):
@@ -79,7 +86,7 @@ class AppBot(commands.Bot):
 
     def loadApp(self, modules: Iterable[str]):
         for modulePath in modules:
-            slash = _slash_from_module(modulePath)
+            slash = _slashFromModule(modulePath)
             if not slash:
                 continue
             for s in slash:
@@ -111,20 +118,42 @@ class AppBot(commands.Bot):
 
             await self.http.request(r, json=fmt)
 
-    async def process_slash_commands(self, interaction: discord.Interaction, data):
+    def getAppCommand(
+        self, name, guildId: Optional[int] = None
+    ) -> Union[ApplicationCommand, Slash]:
+        try:
+            print(name)
+            command = self._appCmds.get(name)  # type: ignore
+            if not command and guildId is not None:
+                command = self._guildAppCmds[guildId][name]  # type: ignore
+            else:
+                raise KeyError
+        except KeyError:
+            raise ValueError(
+                "Invalid command, slash command takes awhile to update. Please try again later"
+            ) from None
+        return command
+
+    async def process_app_commands(self, interaction: discord.Interaction):
+        data = interaction.data
+        if not data:
+            return
+
         dataOpts = data.get("options", [])
 
-        # TODO: handle subcommand and subcommand group
         try:
-            command: Slash = self._appCmds.get(data["name"])  # type: ignore
-            if not command:
-                command = self._guildAppCmds[interaction.guild_id][data["name"]]  # type: ignore
-        except KeyError:
+            command = self.getAppCommand(data["name"], interaction.guild_id)
+        except ValueError as err:
             return await interaction.response.send_message(
-                "Invalid command, slash command takes awhile to update. Please try again later",
+                str(err),
                 ephemeral=True,
             )
-        else:
+
+        resolved = data.get("resolved")
+
+        arg = None
+
+        if isinstance(command, Slash):
             # Try to get subcommand or subcommand group
             for c in dataOpts:
                 if c["type"] > 2:
@@ -140,37 +169,42 @@ class AppBot(commands.Bot):
             # Deep copy options
             options = copy.deepcopy(command.__app_options__)
 
-        resolved = data.get("resolved")
+            for s in dataOpts:
+                optName = s["name"]
 
-        for s in dataOpts:
-            optName = s["name"]
+                if 3 <= s["type"] <= 5:
+                    if (value := s.get("value")) is not None:
+                        options[optName].value = value
+                elif s["type"] == 6:
+                    # Construct Member/User object out of resolved data
+                    if not resolved:
+                        continue
 
-            if 3 <= s["type"] <= 5:
-                if (value := s.get("value")) is not None:
-                    options[optName].value = value
-            elif s["type"] == 6:
-                # Construct Member/User object out of resolved data
-                if not resolved:
-                    continue
+                    userId = s.get("value")
+                    if not userId:
+                        raise ValueError("Invalid User")
 
-                userId = s.get("value")
-                if not userId:
-                    raise ValueError("Invalid User")
+                    options[optName].value = _userFromResolved(
+                        userId, interaction.guild, interaction._state, resolved
+                    )
+            arg = WrappedOptions(options, bot=self)
+        elif isinstance(command, UserCommand):
+            userId = data.get("target_id")
+            if not userId:
+                raise ValueError("Invalid User")
 
-                options[optName].value = _memberFromResolved(
-                    userId, interaction.guild, interaction._state, resolved
-                )
-        return await command(interaction, WrappedOptions(options, bot=self))
+            arg = _userFromResolved(
+                userId, interaction.guild, interaction._state, resolved
+            )
+        elif isinstance(command, MessageCommand):
+            messageId = data.get("target_id")
+            if not messageId:
+                raise ValueError("Invalid Message")
 
-    async def process_app_commands(self, interaction: discord.Interaction):
-        # Currently only supports slash
-        # TODO: Support context menu
-        data = interaction.data
-        if not data:
-            return
-
-        if data["type"] == 1:
-            return await self.process_slash_commands(interaction, data)
+            arg = _messageFromResolved(
+                messageId, interaction.channel, interaction._state, resolved
+            )
+        return await command(interaction, arg)  # type: ignore
 
     async def on_interaction(self, interaction: discord.Interaction):
         """Mainly used to handle slash command"""

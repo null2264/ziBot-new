@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 import discord
 
-from core.app_command import Slash, UserCommand
+from core.app_command import MessageCommand, Slash, UserCommand
 
 
 class Animal(Slash, description="Get a random animal picture"):
@@ -38,16 +38,16 @@ class Echo(Slash, guilds=[807260318270619748, 745481731133669476]):
         await interaction.response.send_message(options.message)
 
 
-class Hello(UserCommand, guilds=[807260318270619748, 745481731133669476]):
-    async def callback(self, interaction: discord.Interaction) -> Any:
-        await interaction.response.send_message("test")
+class WhoIs(UserCommand, guilds=[807260318270619748, 745481731133669476]):
+    async def callback(self, interaction: discord.Interaction, user) -> Any:
+        await interaction.response.send_message(user.mention)
 
 
-class Member(Slash, guilds=[807260318270619748, 745481731133669476]):
-    member: discord.Member
+class MessageInfo(
+    MessageCommand, name="Message Info", guilds=[807260318270619748, 745481731133669476]
+):
+    async def callback(self, inter, message: discord.Message):
+        await inter.response.send_message(message.id)
 
-    async def callback(self, inter, opts):
-        await inter.response.send_message(opts.member.mention)
 
-
-__commands__ = (Animal, Echo, Hello, Member)
+__commands__ = (Animal, Echo, WhoIs, MessageInfo)
