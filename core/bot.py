@@ -89,7 +89,7 @@ class ziBot(AppBot):
             heartbeat_timeout=150.0,
         )
 
-        self.loadApp(modules=["exts.slash"])
+        self.loadApp(modules=["exts.unsorted"])
 
         # make cogs case insensitive
         self._BotBase__cogs: commands.core._CaseInsensitiveDict = (
