@@ -7,6 +7,9 @@ import discord
 from core.app_command import MessageCommand, Slash, UserCommand
 
 
+TESTING_GUILDS = [807260318270619748, 745481731133669476]
+
+
 class Animal(Slash, description="Get a random animal picture"):
     ...
 
@@ -31,14 +34,14 @@ class Dog(Slash, description="Get a random dog picture"):
         return await interaction.followup.send(embed=e)
 
 
-class Echo(Slash, guilds=[807260318270619748, 745481731133669476]):
+class Echo(Slash, guilds=TESTING_GUILDS):
     message: str
 
     async def callback(self, interaction: discord.Interaction, options) -> Any:
         await interaction.response.send_message(options.message)
 
 
-class WhoIs(UserCommand, guilds=[807260318270619748, 745481731133669476]):
+class WhoIs(UserCommand, guilds=TESTING_GUILDS):
     async def callback(self, interaction: discord.Interaction, user) -> Any:
         await interaction.response.send_message(user.mention)
 
@@ -50,4 +53,11 @@ class MessageInfo(
         await inter.response.send_message(message.id)
 
 
-__commands__ = (Animal, Echo, WhoIs, MessageInfo)
+class Which(Slash, guilds=TESTING_GUILDS):
+    choices: Literal["hello", "test"]
+
+    async def callback(self, interaction: discord.Interaction, options) -> Any:
+        await interaction.response.send_message(f"Selected: {options.choices}")
+
+
+__commands__ = (Animal, Echo, WhoIs, MessageInfo, Which)

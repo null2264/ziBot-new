@@ -176,7 +176,6 @@ def getOptions(
 
                     values.append(Choice(name=str(val), value=val))
 
-                option.default = values[0]
                 option.type = convertToType(t)
                 option.choices = values
             else:
