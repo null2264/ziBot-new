@@ -329,7 +329,7 @@ class Meta(MetaCustomCommands):
                 if owner == message.author.id:
                     continue
 
-                user = self.bot.get_user(owner) or await self.bot.fetch_user(owner)
+                user = guild.get_member(owner) or await guild.fetch_member(owner)
                 if user:
                     await user.send(
                         "In {0.channel.mention} ({0.guild})".format(message),
