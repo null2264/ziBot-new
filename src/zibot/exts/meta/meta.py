@@ -292,6 +292,7 @@ class Meta(MetaCustomCommands):
 
     @commands.Cog.listener("on_message")
     async def onHighlight(self, message: discord.Message):
+        # TODO: Check if member haven't send a message for an hour before highlighting them
         guild = message.guild
         if message.author.bot or not message.content or not guild:
             return
