@@ -283,11 +283,19 @@ class Meta(MetaCustomCommands):
 
     @commands.group(aliases=("hl",))
     async def highlight(self, ctx):
-        """Group root for highlights"""
+        """Manage your highlight words
+
+        When a highlight word/phrase is found, the bot will send you a private
+        message with the message that triggered it along with contexts."""
         pass
 
     @highlight.command()
     async def add(self, ctx, *, text: str):
+        """Add a new highlight word/phrase
+
+        Note, highlight words/phrases are NOT case-sensitive!"""
+        text = text.lower()
+
         # TODO: Actually add the text to highlights db
         await ctx.try_reply(text)
 
@@ -303,11 +311,11 @@ class Meta(MetaCustomCommands):
             return
 
         for hl, owners in guildHighlight.items():
-            if hl not in message.content:
+            if hl not in message.content.lower():
                 continue
 
             # Getting context
-            msgs: list[discord.Message] = [message]
+            msgs: List[discord.Message] = [message]
             async for history in channel.history(limit=4, before=message.created_at):
                 msgs.append(history)
 
