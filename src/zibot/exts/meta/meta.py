@@ -17,6 +17,7 @@ from discord.ext import commands
 
 from ...core import checks
 from ...core import commands as cmds
+from ...core.data import ExpiringDict
 from ...core.context import Context
 from ...core.embed import ZEmbed, ZEmbedBuilder
 from ...core.errors import DefaultError
@@ -305,7 +306,12 @@ class Meta(MetaCustomCommands):
         if message.author.bot or not message.content or not guild:
             return
 
-        channel = message.channel
+        channelId = message.channel.id
+        authorId = message.author.id
+        msgId = message.id
+        if not self.lastSeen.get(channelId):
+            self.lastSeen[channelId] = ExpiringDict(maxAgeSeconds=1800)
+        self.lastSeen[channelId][authorId] = msgId
 
         if not (guildHighlight := self.highlights.get(guild.id)):
             return
@@ -315,8 +321,8 @@ class Meta(MetaCustomCommands):
                 continue
 
             # Getting context
-            msgs: List[discord.Message] = [message]
-            async for history in channel.history(limit=4, before=message.created_at):
+            msgs: list[discord.Message] = [message]
+            async for history in message.channel.history(limit=4, before=message.created_at):
                 msgs.append(history)
 
             context = []
@@ -338,14 +344,8 @@ class Meta(MetaCustomCommands):
                 if owner == message.author.id:
                     continue
 
-                # Check if member sent a message 30 minutes prior
-                if await channel.history(
-                    after=utcnow() - dt.timedelta(minutes=30.0)
-                ).get(author__id=owner):
-                    continue
-
                 user = guild.get_member(owner) or await guild.fetch_member(owner)
-                if user:
+                if user and self.lastSeen.get(channelId, {}).get(user.id):
                     await user.send(
                         "In {0.channel.mention} ({0.guild})".format(message),
                         embed=e,
