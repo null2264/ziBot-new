@@ -168,3 +168,4 @@ class Highlight(ContainsGuildId, Model):
 
     class Meta:
         table = "highlight"
+        unique_together = (("text", "ownerId"),)
