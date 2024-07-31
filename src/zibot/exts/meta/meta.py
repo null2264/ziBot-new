@@ -313,7 +313,8 @@ class Meta(MetaCustomCommands):
             self.lastSeen[channelId] = ExpiringDict(maxAgeSeconds=1800)
         self.lastSeen[channelId][authorId] = msgId
 
-        if not (guildHighlight := self.highlights.get(guild.id)):
+        guildHighlight = self.highlights.get(guild.id)
+        if not guildHighlight:
             return
 
         for hl, owners in guildHighlight.items():
