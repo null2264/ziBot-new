@@ -4,7 +4,7 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """
 
-# Data provided Khalooody and Slh from a MCBE Speedrun discord server
+# Data provided by Khalooody and Slh from a MCBE Speedrun discord server
 
 blocks = [
     'acacia_button:16',
