@@ -168,6 +168,8 @@ findseed-result-classic = <@{ $userId }> -> Your seed is a { $eyeCount ->
         [one] **{ $eyeCount }** eye
        *[other] **{ $eyeCount }** eyes
     }
+findblock = findblock
+findblock-desc = Try your luck with MCBE's UGBC
 httpcat = httpcat
 httpcat-desc = Get http status code with cat in it
 pp = pp

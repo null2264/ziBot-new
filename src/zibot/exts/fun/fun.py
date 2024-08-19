@@ -9,7 +9,7 @@ from random import choice, randint, random, shuffle
 from typing import get_args
 
 import discord
-from discord import app_commands
+from discord import app_commands, PartialEmoji
 from discord.app_commands import Choice
 from discord.app_commands import locale_str as _
 from discord.ext import commands
@@ -23,6 +23,7 @@ from ...core.errors import ArgumentError
 from ...core.mixin import CogMixin
 from ...utils.api import reddit
 from ...utils.piglin import Piglin
+from ...utils.ugbc import UGBC
 from ._flags import FINDSEED_MODES, FindseedFlags
 
 
@@ -35,6 +36,7 @@ class Fun(commands.Cog, CogMixin):
     def __init__(self, bot):
         super().__init__(bot)
         self.reddit = reddit.Reddit(self.bot.session)
+        self.ugbc = UGBC()
 
     @cmds.command(
         name=_("meme"),
@@ -457,3 +459,24 @@ class Fun(commands.Cog, CogMixin):
     async def lootTableSuggestion(self, inter, choice):
         rps = (("Before Nerf", "before"), ("After Nerfed", "nerfed"))
         return [app_commands.Choice(name=i[0], value=i[1]) for i in rps]
+
+    @cmds.command(
+        name=_("findblock"),
+        description=_("findblock-desc"),
+        aliases=("fblk",),
+        hybrid=True,
+        extras=dict(
+            example=("findblock", "fblk"),
+        ),
+    )
+    @commands.cooldown(5, 25, commands.BucketType.user)
+    async def findblock(self, ctx):
+        result = self.ugbc.randomize()
+        missing = PartialEmoji.from_str("<:missingtexture:807536928361545729>")
+        e = ZEmbed(
+            ctx,
+            title="UGBC",
+            description=f"{missing} ({result.id})",
+            colour=discord.Color.yellow(),
+        ).set_footer(text="Work in Progress")
+        await ctx.try_reply(embeds=[e])
