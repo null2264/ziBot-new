@@ -475,7 +475,7 @@ class Fun(commands.Cog, CogMixin):
         missing = PartialEmoji.from_str("<:missingtexture:807536928361545729>")
         e = ZEmbed(
             ctx,
-            title="UGBC",
+            title="Universal Gravity Block Conversion",
             description=f"{missing} ({result.id})",
             colour=discord.Color.yellow(),
         ).set_footer(text="Work in Progress")
