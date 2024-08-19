@@ -13,6 +13,7 @@
 
 ### Internal Changes
 - [**Added**] Add `ClampedRange` to revert some command's old range behaviour
+- [**Changed**] Updated `discord.py` to 2.4.0
 
 ## 3.7.0 (Into the Multilingual Era)
 
