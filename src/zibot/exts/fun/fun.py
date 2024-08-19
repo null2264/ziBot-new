@@ -479,4 +479,4 @@ class Fun(commands.Cog, CogMixin):
             description=f"{missing} ({result.id})",
             colour=discord.Color.yellow(),
         ).set_footer(text="Work in Progress")
-        await ctx.try_reply(embeds=[e])
+        await ctx.try_reply(embed=e)
