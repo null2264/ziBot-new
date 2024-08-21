@@ -1,4 +1,4 @@
-FROM python:3.10.9-slim as base
+FROM python:3.10.9-slim AS base
 
 LABEL org.opencontainers.image.source="https://github.com/ZiRO-Bot/Z3R0"
 LABEL org.opencontainers.image.description="A multi-purpose open-source discord bot"
@@ -22,7 +22,7 @@ RUN apt-get update && apt-get upgrade -y \
     && python -m venv /venv
 
 # ---
-FROM base as builder
+FROM base AS builder
 
 WORKDIR /app
 
@@ -32,7 +32,7 @@ ADD src/ ./src
 RUN poetry install --without test,dev -E postgresql -E mysql -E voice -E speedup
 
 # ---
-FROM base as final
+FROM base AS final
 
 WORKDIR /app
 
