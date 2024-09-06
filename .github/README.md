@@ -13,8 +13,7 @@
     <a href="/LICENSE"><img alt="License: MPL-2.0" src="https://img.shields.io/badge/license-MPL--2.0-blue.svg"></a>
     <a href="https://liberapay.com/ZiRO2264/donate"><img alt="Donate using Librepay" src="https://img.shields.io/liberapay/patrons/ZiRO2264.svg?logo=liberapay"></a>
     <br/>
-    <a href="https://github.com/ZiRO-Bot/Z3R0/actions/workflows/test.yml"><img alt="CI: Tests" src="https://github.com/ZiRO-Bot/Z3R0/actions/workflows/test.yml/badge.svg"></a>
-    <a href="https://github.com/ZiRO-Bot/Z3R0/actions/workflows/build.yml"><img alt="CI: Nightly Build" src="https://github.com/ZiRO-Bot/Z3R0/actions/workflows/build.yml/badge.svg"></a>
+    <a href="https://github.com/ZiRO-Bot/Z3R0/actions/workflows/build.yml"><img alt="CI: Build and Test" src="https://github.com/ZiRO-Bot/Z3R0/actions/workflows/build.yml/badge.svg"></a>
 </p>
 
 ## About
