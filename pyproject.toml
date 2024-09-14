@@ -20,7 +20,7 @@ beautifulsoup4 = "4.11.1"
 discord-ext-menus = "1.1"
 fuzzywuzzy = "0.18.0"
 humanize = "4.4.0"
-jishaku = {git = "https://github.com/ZiRO-Bot/jishaku", rev = "9174fad992247c88ca9b3202d44938c4d46e9776"}
+jishaku = {git = "https://github.com/Gorialis/jishaku", rev = "0c16ddca174726966704a8f12f6e8f0e26528202"}
 Pillow = "9.3.0"
 python-dateutil = "2.8.2"
 Levenshtein = "0.20.3"
