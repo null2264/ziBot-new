@@ -77,6 +77,8 @@ class Fun(commands.Cog, CogMixin):
 
             await ctx.try_reply(embed=e)
 
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.choices(args=[Choice(name=i, value=i) for i in get_args(FINDSEED_MODES)])
     @app_commands.rename(args="mode")
     @cmds.command(
@@ -386,6 +388,8 @@ class Fun(commands.Cog, CogMixin):
         ]
         return await ctx.try_reply("You rolled {}".format(", ".join(results)))
 
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
     @cmds.command(
         name=_("clap"),
         aliases=("👏",),
@@ -397,6 +401,8 @@ class Fun(commands.Cog, CogMixin):
     async def clap(self, ctx, *, text: str = ""):
         return await ctx.try_reply(text.replace(" ", " 👏 ") or " 👏 ")
 
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
     @cmds.command(
         name=_("barter"),
         description=_("barter-desc"),
@@ -460,6 +466,8 @@ class Fun(commands.Cog, CogMixin):
         rps = (("Before Nerf", "before"), ("After Nerfed", "nerfed"))
         return [app_commands.Choice(name=i[0], value=i[1]) for i in rps]
 
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
     @cmds.command(
         name=_("findblock"),
         description=_("findblock-desc"),
